@@ -1,0 +1,156 @@
+/* DOM overlays (auto-drop, fairness, verify, retry, debug). The canvas draws everything else. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 4, 20, 0.72);
+  z-index: 22;
+  font-family: Arial, sans-serif;
+}
+.modal {
+  width: min(460px, 100%);
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  box-sizing: border-box;
+  background: #2a1748;
+  color: #fff6e0;
+  border: 2px solid #5b3a8c;
+  border-radius: 14px;
+  padding: 16px 18px 18px;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.modal h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.modal-close {
+  background: none;
+  border: 0;
+  color: #b9a6d6;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.modal-body {
+  display: grid;
+  gap: 10px;
+}
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: #b9a6d6;
+}
+.field input,
+.field select {
+  font:
+    16px Arial,
+    sans-serif; /* 16px stops iOS zooming on focus */
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #5b3a8c;
+  background: #1a0f2e;
+  color: #fff6e0;
+  min-width: 0;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.row > * {
+  flex: 1 1 0;
+}
+.btn {
+  font:
+    bold 16px Arial,
+    sans-serif;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #5b3a8c;
+  background: #3d2466;
+  color: #fff6e0;
+  cursor: pointer;
+}
+.btn.primary {
+  background: #2fbf71;
+  border-color: #2fbf71;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.mono {
+  font-family: Consolas, Menlo, monospace;
+  font-size: 13px;
+  word-break: break-all;
+  background: #1a0f2e;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #fff6e0;
+}
+.note {
+  font-size: 13px;
+  color: #b9a6d6;
+  margin: 0;
+}
+.error {
+  color: #ff8a8a;
+  font-size: 14px;
+  min-height: 1em;
+  margin: 0;
+}
+.ok {
+  color: #6fe3a5;
+}
+.bad {
+  color: #ff8a8a;
+}
+.result {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  font-size: 14px;
+}
+.result dt {
+  color: #b9a6d6;
+}
+.result dd {
+  margin: 0;
+}
+.debug {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 40;
+  width: 210px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  font:
+    12px Arial,
+    sans-serif;
+  color: #fff6e0;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px dashed #ffb800;
+  border-radius: 8px;
+}
+.debug input,
+.debug select,
+.debug button {
+  font:
+    12px Arial,
+    sans-serif;
+}
+.debug summary {
+  cursor: pointer;
+  color: #ffb800;
+}

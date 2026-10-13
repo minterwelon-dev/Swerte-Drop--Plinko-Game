@@ -1,4 +1,4 @@
-# AGENTS.md — Ember Drop (Phaser 3 Plinko)
+# AGENTS.md — Swerte Drop (Phaser 3 Plinko)
 
 Read [PROJECT_BRIEF.md](PROJECT_BRIEF.md) for the game spec, RGS contract, phases and acceptance criteria. This file holds the **conventions and rules** for working in the repo.
 
@@ -175,7 +175,8 @@ Standard Vite build (`dist/` with hashed assets). No `vite-plugin-singlefile`, n
 - If built output contains `console.error` from Phaser or bundled node modules, drop it at bundle time in the Vite config instead of editing library source:
 
 ```js
-export default { esbuild: { pure: ['console.error'] } };
+// Vite 8 (rolldown); `esbuild.pure` is ignored there
+export default { build: { rolldownOptions: { treeshake: { manualPureFunctions: ['console.error'] } } } };
 ```
 
 ## Asset Loading
@@ -241,4 +242,4 @@ export default { esbuild: { pure: ['console.error'] } };
 | NineSlice won't shrink in landscape | `NineSlice` clamps to its inset sizes in source pixels. Operate it in source-pixel space and scale uniformly with `setScale(sd(1))` |
 | Letterbox appears | Avoid `Scale.FIT/EXPAND/CENTER_BOTH`; keep `Scale.NONE` with manual sizing |
 | Debug code leaks to production | Guard with `import.meta.env.DEV`; grep `dist/` for `force=` before release |
-| Build output contains library `console.error` | Use `esbuild: { pure: ['console.error'] }` in the Vite config. Do not edit library source |
+| Build output contains library `console.error` | Use `build.rolldownOptions.treeshake.manualPureFunctions: ['console.error']` in the Vite config (Vite 8). Do not edit library source |

@@ -1,6 +1,6 @@
-# Ember Drop — Phaser 3 Plinko (Project Brief)
+# Swerte Drop — Phaser 3 Plinko (Project Brief)
 
-Working title: **Ember Drop**. Rename freely. Original, play-money sample.
+Title: **Swerte Drop**. Original, play-money sample.
 
 ## 1. Purpose
 
@@ -167,34 +167,34 @@ Mock behaviours required: injectable latency, injectable failure rate, seedable 
 Tick items as they are completed.
 
 ### Phase 0: Setup (0.5 day)
-- [ ] Vite + TypeScript (strict) + Phaser 3.90, ESLint, Prettier, Vitest, `tsx`
-- [ ] Folder structure from `AGENTS.md`
-- [ ] Responsive helpers (`sx`, `sy`, `sd`) with portrait and landscape references
-- [ ] `npm run dev`, `build`, `test`, `simulate`, `tune` all run
+- [x] Vite + TypeScript (strict) + Phaser 3.90, ESLint, Prettier, Vitest, `tsx`
+- [x] Folder structure from `AGENTS.md`
+- [x] Responsive helpers (`sx`, `sy`, `sd`) with portrait and landscape references
+- [x] `npm run dev`, `build`, `test`, `simulate`, `tune` all run
 
 ### Phase 1: Math, tuner, mock RGS, simulation (2 days)
-- [ ] `binomial.ts`: bin probabilities
-- [ ] `fair.ts`: HMAC path derivation (works in Node and browser via `globalThis.crypto`)
-- [ ] `tune.ts`: generate 15 tables to the target RTP, write `multipliers.ts`
-- [ ] `drop.ts`: build a `DropResponse` from path and bet
-- [ ] `MockRGS`: seeds, nonce, balance, rotate, latency/failure, resume
-- [ ] `simulate.ts`: per-table report (see section 6) and an `--all` mode writing `docs/simulation-report.txt`
-- [ ] Vitest suite (see section 7)
+- [x] `binomial.ts`: bin probabilities
+- [x] `fair.ts`: HMAC path derivation (works in Node and browser via `globalThis.crypto`)
+- [x] `tune.ts`: generate 15 tables to the target RTP, write `multipliers.ts`
+- [x] `drop.ts`: build a `DropResponse` from path and bet
+- [x] `MockRGS`: seeds, nonce, balance, rotate, latency/failure, resume
+- [x] `simulate.ts`: per-table report (see section 6) and an `--all` mode writing `docs/simulation-report.txt`
+- [x] Vitest suite (see section 7)
 
 ### Phase 2: Board, ball animation, HUD (2 days)
-- [ ] Board driven by `BinDef[]`: baked peg texture, bins with tier colours
-- [ ] Ball path animation from `path` (waypoints, parabolic bounces, peg flash, landing bounce)
-- [ ] Ball pool with up to 5 concurrent balls, display balance logic
-- [ ] HUD: balance, bet, rows, risk, drop, turbo, skip, history strip
-- [ ] Portrait and landscape layouts
+- [x] Board driven by `BinDef[]`: baked peg texture, bins with tier colours
+- [x] Ball path animation from `path` (waypoints, parabolic bounces, peg flash, landing bounce)
+- [x] Ball pool with up to 5 concurrent balls, display balance logic
+- [x] HUD: balance, bet, rows, risk, drop, turbo, skip, history strip
+- [x] Portrait and landscape layouts
 
 ### Phase 3: Auto-drop, fairness, platform concerns (1.5 days)
-- [ ] Auto-drop with stop conditions and required loss limit; pauses on hidden tab
-- [ ] Seed panel: hash display, client seed edit, rotate
-- [ ] Verify modal (DOM) recomputing path, bin, multiplier
-- [ ] Sound manager: first-tap unlock, mute, suspend when hidden, pitch-stepped peg ticks, landing tiers
-- [ ] Error handling: dropped request retry, resume after refresh
-- [ ] Debug panel (DEV only)
+- [x] Auto-drop with stop conditions and required loss limit; pauses on hidden tab
+- [x] Seed panel: hash display, client seed edit, rotate
+- [x] Verify modal (DOM) recomputing path, bin, multiplier
+- [x] Sound manager: first-tap unlock, mute, suspend when hidden, pitch-stepped peg ticks, landing tiers
+- [x] Error handling: dropped request retry, resume after refresh
+- [x] Debug panel (DEV only)
 
 ### Phase 4: Stage B Plinko Feature (2 days)
 - [ ] `feature.ts` math: ball count, per-ball paths, jackpot bins, cap
