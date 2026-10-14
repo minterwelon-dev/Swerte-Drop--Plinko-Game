@@ -1,0 +1,23 @@
+{
+  "errors": [],
+  "tiers": [
+    {
+      "title": "BIG WIN",
+      "particles": 40
+    },
+    {
+      "title": "MEGA WIN",
+      "particles": 80
+    },
+    {
+      "title": "EPIC WIN",
+      "particles": 120
+    }
+  ],
+  "performance": {
+    "fps": 77.5451423671104,
+    "worst": 20.900000000001455,
+    "inFlight": 5
+  },
+  "resume": true
+}

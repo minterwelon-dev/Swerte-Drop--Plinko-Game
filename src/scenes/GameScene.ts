@@ -12,9 +12,13 @@ import { Ball, type BallEvents, type BallRound } from '../game/Ball';
 import { BallPool } from '../game/BallPool';
 import { Bins, classicBinDefs, featureBinDefs } from '../game/Bins';
 import { Board } from '../game/Board';
+import { Booth } from '../game/Booth';
 import { DebugPanel, devRgsOptions } from '../game/DebugPanel';
 import { FeatureOverlay } from '../game/FeatureOverlay';
 import { HistoryStrip } from '../game/HistoryStrip';
+import { AnimDirector } from '../game/animation/AnimDirector';
+import { Intro } from '../game/animation/Intro';
+import { setModalTurbo } from '../game/animation/ModalFx';
 import { Hud } from '../game/Hud';
 import { RetryModal } from '../game/RetryModal';
 import { SeedPanel } from '../game/SeedPanel';
@@ -22,7 +26,7 @@ import { SoundManager } from '../game/SoundManager';
 import { VerifyModal } from '../game/VerifyModal';
 import { devAssert } from '../utils/devAssert';
 import { modalOpen } from '../utils/dom';
-import { currentLayout, RELAYOUT_EVENT, syncViewport } from '../utils/responsive';
+import { currentLayout, reducedMotion, RELAYOUT_EVENT, syncViewport } from '../utils/responsive';
 import { DEFERRED_READY } from './BootScene';
 
 const MESSAGE_MS = 3000;
@@ -49,9 +53,12 @@ export class GameScene extends Phaser.Scene {
   private sm: PlinkoStateMachine | null = null;
   private sessionId = '';
   private board!: Board;
+  private booth!: Booth;
   private bins!: Bins;
   private pool!: BallPool;
   private hud!: Hud;
+  private director!: AnimDirector;
+  private readonly intro = new Intro();
   private history!: HistoryStrip;
   private sfx!: SoundManager;
   private autoPanel!: AutoPlayPanel;
@@ -65,6 +72,7 @@ export class GameScene extends Phaser.Scene {
   private risk: Risk = gameConfig.defaultRisk;
   private turbo = false;
   private lastWin = 0;
+  private lastMultiplier = 0;
   private message = '';
   private messageMs = 0;
   private auto: AutoPlay | null = null;
@@ -94,11 +102,14 @@ export class GameScene extends Phaser.Scene {
     this.rgs = rgs;
     if (import.meta.env.DEV) new DebugPanel(rgs);
 
+    this.booth = new Booth(this);
     this.board = new Board(this);
     this.bins = new Bins(this);
     this.pool = new BallPool(this, gameConfig.maxBalls);
-    this.history = new HistoryStrip(this, gameConfig.historyLength);
     this.sfx = new SoundManager(this);
+    const wheelTick = () => this.sfx.wheelTick();
+    this.events.on('feature:wheel-tick', wheelTick);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.events.off('feature:wheel-tick', wheelTick));
     this.retry = new RetryModal();
     this.verifyModal = new VerifyModal();
     this.overlay = new FeatureOverlay(this);
@@ -115,12 +126,15 @@ export class GameScene extends Phaser.Scene {
       onRisk: (risk) => this.changeBoard(this.rows, risk),
       onTurbo: () => {
         this.turbo = !this.turbo;
+        setModalTurbo(this.turbo);
         this.refreshHud();
       },
       onSkip: () => {
         this.pool.skipAll();
+        this.director.skip();
         this.overlay.skip();
         if (this.feat) this.feat.skip = true;
+        this.refreshHud();
       },
       onAuto: () => this.toggleAuto(),
       onFair: () => this.sm && this.seedPanel.open(this.seed, this.sm.state === 'Idle'),
@@ -130,8 +144,15 @@ export class GameScene extends Phaser.Scene {
         this.refreshHud();
       },
     });
+    this.history = new HistoryStrip(this, gameConfig.historyLength);
+    this.director = new AnimDirector(this, this.board, this.bins, this.hud, this.history, this.booth);
+    this.input.on('pointerdown', () => {
+      this.intro.skip();
+      this.booth.skip();
+      this.cameras.main.fadeEffect.reset();
+    });
     this.input.keyboard?.on('keydown-SPACE', () => {
-      if (!modalOpen()) void this.drop(false);
+      if (!modalOpen() && !this.hud.settingsOpen) void this.drop(false);
     });
 
     this.game.events.on(RELAYOUT_EVENT, this.relayout, this);
@@ -139,6 +160,16 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off(RELAYOUT_EVENT, this.relayout, this),
     );
     this.relayout();
+    this.booth.startIntro();
+    this.intro.start(this, this.booth.sign);
+    const motionChange = () => {
+      if (reducedMotion()) this.director.skip();
+      this.refreshHud();
+    };
+    document.addEventListener('motionchange', motionChange);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      document.removeEventListener('motionchange', motionChange),
+    );
     this.loadDeferred();
     void this.startSession();
   }
@@ -146,21 +177,25 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, dt: number): void {
     // Rotation on some mobile browsers fires no resize event; poll visualViewport every frame.
     syncViewport(this.game);
+    if (document.hidden) return;
+    if (this.game.hasFocus) this.booth.update(dt, this.turbo);
     if (this.messageMs > 0) {
       this.messageMs -= dt;
       if (this.messageMs <= 0) this.setMessage('');
     }
     this.autoTick(dt);
     this.featureTick(dt);
-    this.overlay.update(dt);
+    this.overlay.update(dt, this.turbo);
     this.pool.update(
       dt,
       this.turbo ? gameConfig.turboRowMs : gameConfig.rowMs,
       this.board.geo,
       this.ballEvents,
     );
-    this.board.update(dt);
-    this.bins.update(dt);
+    const presenting = this.director.active;
+    this.director.update(dt, this.turbo);
+    this.intro.update(dt, this.turbo);
+    if (presenting !== this.director.active) this.refreshHud();
   }
 
   private async startSession(): Promise<void> {
@@ -177,10 +212,12 @@ export class GameScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  /** Refresh mid-drop: animate rounds the server settled but the player never saw land. */
+  /** Restore already-settled rounds directly to their authoritative landing state. */
   private resume(pending: DropResponse[]): void {
     const sm = this.sm;
     if (!sm || pending.length === 0) return;
+    this.intro.skip();
+    this.booth.skip();
     devAssert(pending.length <= gameConfig.maxBalls, `${pending.length} pending rounds exceed the ball pool`);
     const rounds = pending.slice(0, gameConfig.maxBalls);
     for (const r of pending.slice(gameConfig.maxBalls)) void this.rgs.ack(r.roundId);
@@ -190,6 +227,7 @@ export class GameScene extends Phaser.Scene {
       const ball = this.pool.acquire();
       ball.hold(this.board.geo);
       this.present(r, ball);
+      ball.skipping = true;
     }
   }
 
@@ -208,12 +246,16 @@ export class GameScene extends Phaser.Scene {
     const bet = this.bet;
     if (!sm || !this.registry.get(DEFERRED_READY)) return null;
     if (auto ? !sm.canAutoDrop(bet) : !sm.canDrop(bet)) return null;
+    if (sm.inFlight === 0) {
+      this.board.skip();
+      this.bins.skip();
+    }
     sm.beginDrop(bet);
     const ball = this.pool.acquire();
     ball.hold(this.board.geo);
     this.refreshHud();
 
-    const res = await this.requestDrop(bet);
+    const res = await this.requestDrop(bet, ball);
     if (!res) {
       ball.release();
       sm.dropFailed(bet);
@@ -226,7 +268,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Sends the drop, offering a retry on network failure. The ball waits at the top meanwhile. */
-  private async requestDrop(bet: number): Promise<DropResponse | null> {
+  private async requestDrop(bet: number, ball: Ball): Promise<DropResponse | null> {
     for (;;) {
       try {
         return await this.rgs.drop({ sessionId: this.sessionId, bet, rows: this.rows, risk: this.risk });
@@ -240,9 +282,11 @@ export class GameScene extends Phaser.Scene {
         // The request may have settled with only the response lost: pick it up instead of betting twice.
         const lost = await this.findLostRound();
         if (lost) return lost;
+        ball.withdraw();
         if (this.auto?.active) this.endAuto('error');
         if (!(await this.retry.ask('The drop did not reach the server. Your bet was not taken.')))
           return null;
+        ball.hold(this.board.geo);
       }
     }
   }
@@ -271,17 +315,20 @@ export class GameScene extends Phaser.Scene {
     }
     this.lastRound = res;
     ball.launch(res, this.board.geo);
+    this.director.launch();
   }
 
   private onLand(ball: Ball): void {
     const res = ball.res;
+    const short = ball.skipping;
     ball.release();
     if (!res || !this.sm) return;
-    this.bins.land(res.bin);
-    this.history.push(res.multiplierX100);
+
     this.sfx.land(this.bins.tierOf(res.bin));
     this.lastWin = res.win;
+    this.lastMultiplier = res.multiplierX100;
     this.sm.ballLanded(res.win);
+    this.director.land(res.bin, res.win, res.multiplierX100, this.sm.displayBalance, this.board.geo, short);
     void this.rgs.ack(res.roundId).then(() => this.known.delete(res.roundId));
     this.refreshHud();
   }
@@ -292,10 +339,11 @@ export class GameScene extends Phaser.Scene {
   private async triggerFeature(): Promise<void> {
     const sm = this.sm;
     if (!sm?.canStartFeature() || !this.registry.get(DEFERRED_READY)) return;
+    this.director.skip();
     sm.startFeature();
     this.refreshHud();
     const request = this.requestFeature(this.bet);
-    await this.overlay.intro('Scatter trigger!\nTap to spin');
+    await this.overlay.intro('Spin for your bonus balls');
     const res = await request;
     if (!res) {
       this.overlay.hide();
@@ -306,12 +354,11 @@ export class GameScene extends Phaser.Scene {
     await this.playFeature(res);
   }
 
-  /** Refresh mid-feature: replay the settled feature; its total is credited as the balls land again. */
+  /** Restore an already-settled feature at its landing states without replaying the wheel or travel. */
   private async resumeFeature(res: FeatureResult): Promise<void> {
     this.sm?.resumeFeature(res.totalWin);
     this.refreshHud();
-    await this.overlay.intro('Resuming your feature');
-    await this.playFeature(res);
+    await this.playFeature(res, true);
   }
 
   private async requestFeature(bet: number): Promise<FeatureResult | null> {
@@ -339,7 +386,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private async playFeature(res: FeatureResult): Promise<void> {
+  private async playFeature(res: FeatureResult, restored = false): Promise<void> {
     const sm = this.sm;
     if (!sm) return;
     for (const b of res.balls)
@@ -350,7 +397,7 @@ export class GameScene extends Phaser.Scene {
 
     sm.featureStep('BallCountWheel');
     this.refreshHud();
-    await this.overlay.spin(res.balls.length, this.turbo);
+    if (!restored) await this.overlay.spin(res.balls.length);
 
     sm.featureStep('FeatureDropping');
     await new Promise<void>((done) => {
@@ -363,19 +410,25 @@ export class GameScene extends Phaser.Scene {
         landed: 0,
         sum: 0,
         credited: 0,
-        waitMs: 0,
-        skip: false,
+        waitMs: restored ? 0 : gameConfig.feature.boardRevealMs,
+        skip: restored,
         done,
       };
       this.showBoard();
+      if (!restored) {
+        this.board.rebuild();
+        this.bins.retile();
+      }
       this.overlay.running(0, balls.length, 0, false);
       this.refreshHud();
     });
 
     sm.featureStep('FeatureSummary');
+    this.director.skip();
     this.lastWin = res.totalWin;
+    this.lastMultiplier = 0;
     this.refreshHud();
-    await this.overlay.summary(res);
+    await this.overlay.summary(res, restored);
     this.feat = null;
     this.overlay.hide();
     this.showBoard();
@@ -393,25 +446,44 @@ export class GameScene extends Phaser.Scene {
       const ball = this.pool.acquire();
       ball.hold(this.board.geo);
       ball.launch(f.balls[f.next++], this.board.geo);
+      this.director.launch();
       ball.skipping = f.skip;
       f.flying++;
       f.waitMs = this.turbo ? gameConfig.feature.turboLaunchMs : gameConfig.feature.launchMs;
     }
+    this.board.setActiveBalls(f.flying);
   }
 
   private onFeatureLand(ball: Ball): void {
     const f = this.feat;
     const r = ball.res;
+    const short = ball.skipping;
     ball.release();
     if (!f || !r || !this.sm) return;
     f.flying--;
     f.landed++;
     f.sum += r.win;
-    this.bins.land(r.bin);
+
     this.sfx.land(this.bins.tierOf(r.bin));
     const credit = Math.min(f.sum, f.res.totalWin) - f.credited;
     f.credited += credit;
     this.sm.featureCredit(credit);
+    this.director.land(r.bin, credit, r.multiplierX100, this.sm.displayBalance, this.board.geo, short, false);
+    const tier = this.bins.tierOf(r.bin);
+    if (!short && credit > 0) {
+      if (f.res.capped && f.credited === f.res.totalWin) {
+        this.director.big.show(f.res.totalWin, 10000, 'MAX WIN', gameConfig.feature.capMs);
+      } else if (tier === 'mini' || tier === 'minor' || tier === 'major') {
+        this.bins.jackpot(r.bin);
+        this.booth.celebrate(r.multiplierX100);
+        this.director.big.show(
+          credit,
+          r.multiplierX100,
+          `${tier.toUpperCase()} JACKPOT`,
+          gameConfig.feature.jackpotMs,
+        );
+      }
+    }
     this.overlay.running(f.landed, f.balls.length, f.credited, f.res.capped && f.credited === f.res.totalWin);
     if (f.landed === f.balls.length) f.done();
     this.refreshHud();
@@ -438,7 +510,8 @@ export class GameScene extends Phaser.Scene {
     const auto = this.auto;
     const sm = this.sm;
     // Pauses while the tab is hidden or a dialog is open.
-    if (!auto?.active || !sm || this.autoBusy || document.hidden || modalOpen()) return;
+    if (!auto?.active || !sm || this.autoBusy || document.hidden || modalOpen() || this.hud.settingsOpen)
+      return;
     this.autoWaitMs -= dt;
     if (this.autoWaitMs > 0) return;
     if (!auto.canDrop(this.bet, sm.serverBalance)) return this.endAuto();
@@ -504,7 +577,7 @@ export class GameScene extends Phaser.Scene {
   // --- Settings and layout ---
 
   private changeBet(step: -1 | 1): void {
-    if (this.sm && !this.sm.canChangeBet()) return;
+    if (this.sm && (!this.sm.canChangeBet() || this.sm.inFlight > 0)) return;
     const levels = gameConfig.betLevels;
     const i = levels.indexOf(this.bet as (typeof levels)[number]);
     this.bet = levels[Math.min(levels.length - 1, Math.max(0, i + step))];
@@ -514,20 +587,29 @@ export class GameScene extends Phaser.Scene {
   private changeBoard(rows: Rows, risk: Risk): void {
     if (this.sm && !this.sm.canChangeBoard()) return;
     const rowsChanged = rows !== this.rows;
+    const changed = rowsChanged || risk !== this.risk;
     this.rows = rows;
     this.risk = risk;
     if (rowsChanged) this.board.setRows(rows);
     this.bins.setBins(classicBinDefs(rows, risk), this.board.geo);
+    if (changed) {
+      if (rowsChanged) this.board.rebuild();
+      this.bins.retile();
+    }
     this.refreshHud();
   }
 
   private relayout(): void {
+    this.intro.skip();
     const layout = currentLayout();
+    this.booth.relayout(layout);
     this.showBoard(layout);
     this.pool.relayout(this.board.geo);
     this.history.relayout(layout);
     this.hud.relayout(layout);
     this.overlay.relayout(layout);
+    this.director.relayout(this.board.geo);
+    this.cameras.main.fadeIn(gameConfig.motion.orientationMs, 20, 35, 30);
     this.refreshHud();
   }
 
@@ -546,17 +628,28 @@ export class GameScene extends Phaser.Scene {
   private refreshHud(): void {
     const sm = this.sm;
     const autoRunning = !!this.auto?.active;
+    if (sm?.state === 'Idle' && sm.inFlight === 0 && sm.displayBalance < this.bet) {
+      let affordable = gameConfig.betLevels[0] as number;
+      for (const level of gameConfig.betLevels) if (level <= sm.displayBalance) affordable = level;
+      if (affordable !== this.bet) {
+        this.bet = affordable;
+        this.hud.fx.limit();
+        this.hud.fx.warnBalance();
+      }
+    }
+    this.board.setActiveBalls(this.feat?.flying ?? sm?.inFlight ?? 0);
     this.hud.set({
       balance: sm?.displayBalance ?? 0,
       lastWin: this.lastWin,
+      lastMultiplier: this.lastMultiplier,
       bet: this.bet,
       rows: this.rows,
       risk: this.risk,
       turbo: this.turbo,
       canDrop: !!sm && sm.canDrop(this.bet),
       canChangeBoard: !!sm && sm.canChangeBoard(),
-      canChangeBet: !!sm && sm.canChangeBet(),
-      canSkip: !!sm && (sm.inFlight > 0 || this.feat !== null),
+      canChangeBet: !!sm && sm.canChangeBet() && sm.inFlight === 0,
+      canSkip: !!sm && (sm.inFlight > 0 || this.feat !== null || this.director.active),
       autoLabel: autoRunning ? `Stop ${this.auto!.roundsLeft}` : 'Auto',
       autoRunning,
       canAuto: !!sm && sm.canStartAuto(),

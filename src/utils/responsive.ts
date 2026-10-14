@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { LAYOUT, REF_LANDSCAPE, REF_PORTRAIT, type Layout } from '../constants';
+import { layoutPortrait, LAYOUT, REF_LANDSCAPE, REF_PORTRAIT, type Layout } from '../constants';
 
 export interface Viewport {
   /** CSS px */
@@ -46,7 +46,7 @@ export function viewport(): Viewport {
 }
 
 export function currentLayout(): Layout {
-  return vp.landscape ? LAYOUT.landscape : LAYOUT.portrait;
+  return vp.landscape ? LAYOUT.landscape : layoutPortrait((vp.h * vp.dpr) / vp.s, -vp.offY / vp.s);
 }
 
 /** Reference x -> canvas x */
@@ -55,6 +55,31 @@ export const sx = (x: number): number => vp.offX + x * vp.s;
 export const sy = (y: number): number => vp.offY + y * vp.s;
 /** Reference size -> canvas size */
 export const sd = (d: number): number => d * vp.s;
+
+let motionOverride = false;
+try {
+  motionOverride = localStorage.getItem('swerte-reduced-motion') === 'true';
+} catch {
+  /* Storage may be disabled. */
+}
+const motionQuery =
+  typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+export const reducedMotion = (): boolean => motionOverride || !!motionQuery?.matches;
+export function setReducedMotion(value: boolean): void {
+  motionOverride = value;
+  try {
+    localStorage.setItem('swerte-reduced-motion', String(value));
+  } catch {
+    /* Session preference still works. */
+  }
+  document.documentElement.classList.toggle('reduce-motion', reducedMotion());
+  if (reducedMotion()) for (const animation of document.getAnimations?.() ?? []) animation.finish();
+  document.dispatchEvent(new Event('motionchange'));
+}
+if (typeof document !== 'undefined') {
+  document.documentElement.classList.toggle('reduce-motion', reducedMotion());
+  motionQuery?.addEventListener?.('change', () => setReducedMotion(motionOverride));
+}
 
 /** Browser viewport in CSS px and the DPR to render at (capped at 3 for fill rate). */
 export function readBrowserViewport(): Viewport {
@@ -72,8 +97,9 @@ export function syncViewport(game: Phaser.Game): boolean {
   const next = readBrowserViewport();
   if (next.w === vp.w && next.h === vp.h && next.dpr === vp.dpr) return false;
   setViewport(next);
-  game.scale.setZoom(1 / next.dpr);
   game.scale.resize(Math.round(next.w * next.dpr), Math.round(next.h * next.dpr));
+  // Set zoom after resize: Phaser leaves old CSS dimensions at zoom=1 otherwise.
+  game.scale.setZoom(1 / next.dpr);
   game.events.emit(RELAYOUT_EVENT);
   return true;
 }

@@ -1,5 +1,8 @@
 import type { RotateResponse, SeedState } from '../rgs/types';
 import { el, field, Modal } from '../utils/dom';
+import { reducedMotion } from '../utils/responsive';
+import { ANIM } from './animation/animConfig';
+import { modalDuration } from './animation/ModalFx';
 
 export interface SeedPanelEvents {
   setClientSeed(seed: string): Promise<SeedState>;
@@ -57,6 +60,7 @@ export class SeedPanel {
     });
     this.rotateBtn.addEventListener('click', async () => {
       try {
+        const oldHash = this.hash.textContent ?? '';
         const r = await ev.rotate();
         this.revealed.replaceChildren(
           el(
@@ -64,9 +68,17 @@ export class SeedPanel {
             { className: 'field' },
             el('span', {}, 'Revealed previous server seed'),
             el('div', { className: 'mono' }, r.revealedServerSeed),
+            el('del', { className: 'mono' }, oldHash),
           ),
         );
         this.hash.textContent = r.newServerSeedHash;
+        const reveal = this.hash.animate(
+          reducedMotion()
+            ? [{ opacity: 0 }, { opacity: 1 }]
+            : [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }],
+          { duration: modalDuration(ANIM.seedMs), easing: 'steps(32)' },
+        );
+        this.hash.onclick = () => reveal.finish();
         this.nonce.textContent = '0';
         this.error.textContent = '';
       } catch (e) {

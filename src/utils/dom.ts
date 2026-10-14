@@ -1,3 +1,4 @@
+import { modalTransition } from '../game/animation/ModalFx';
 type Child = Node | string | null | false;
 
 /** Tiny element builder. Text goes through text nodes, never innerHTML (client seeds are user input). */
@@ -44,8 +45,25 @@ export class Modal {
   private readonly root: HTMLDivElement;
   private readonly onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape') this.close();
+    if (e.key === 'Tab') {
+      const controls = this.root.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+      );
+      const first = controls[0],
+        last = controls[controls.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    }
   };
   private isOpen = false;
+  private closing = false;
+  private transition = 0;
+  private previousFocus: HTMLElement | null = null;
   onClose: (() => void) | null = null;
 
   constructor(title: string, className = '') {
@@ -66,6 +84,7 @@ export class Modal {
     );
     this.root = el('div', { className: 'modal-backdrop' }, box);
     this.root.addEventListener('pointerdown', (e) => {
+      for (const a of this.root.getAnimations({ subtree: true })) a.finish();
       if (e.target === this.root) this.close();
     });
   }
@@ -73,17 +92,31 @@ export class Modal {
   open(): void {
     if (this.isOpen) return;
     this.isOpen = true;
+    this.transition++;
+    this.closing = false;
+    this.root.style.pointerEvents = '';
+    this.previousFocus = document.activeElement as HTMLElement;
     openCount++;
     document.body.append(this.root);
+    void modalTransition(this.root);
     document.addEventListener('keydown', this.onKey);
     (this.body.querySelector('input, select, button') as HTMLElement | null)?.focus();
   }
 
   close(): void {
-    if (!this.isOpen) return;
+    if (!this.isOpen || this.closing) return;
+    this.closing = true;
     this.isOpen = false;
     openCount--;
-    this.root.remove();
+    const transition = ++this.transition;
+    this.root.style.pointerEvents = 'none';
+    void modalTransition(this.root, true).then(() => {
+      if (transition !== this.transition) return;
+      this.closing = false;
+      this.root.remove();
+      this.root.style.pointerEvents = '';
+      if (openCount === 0) this.previousFocus?.focus();
+    });
     document.removeEventListener('keydown', this.onKey);
     this.onClose?.();
   }

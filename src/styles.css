@@ -1,3 +1,15 @@
+@font-face {
+  font-family: 'Bungee';
+  src: url('../Assets/fonts/bungee-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../Assets/fonts/nunito-sans-latin.woff2') format('woff2');
+  font-weight: 200 900;
+  font-display: swap;
+}
 /* DOM overlays (auto-drop, fairness, verify, retry, debug). The canvas draws everything else. */
 .modal-backdrop {
   position: fixed;
@@ -6,18 +18,18 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(10, 4, 20, 0.72);
+  background: rgba(29, 19, 13, 0.6);
   z-index: 22;
-  font-family: Arial, sans-serif;
+  font-family: 'Nunito Sans', sans-serif;
 }
 .modal {
   width: min(460px, 100%);
   max-height: calc(100% - 32px);
   overflow: auto;
   box-sizing: border-box;
-  background: #2a1748;
+  background: #173a2f;
   color: #fff6e0;
-  border: 2px solid #5b3a8c;
+  border: 3px solid #86552f;
   border-radius: 14px;
   padding: 16px 18px 18px;
 }
@@ -31,10 +43,21 @@
   margin: 0;
   font-size: 20px;
 }
+.modal-error {
+  border-color: #b92f27;
+  align-self: flex-start;
+  margin-top: 12vh;
+}
+.reduce-motion .btn {
+  transition: none;
+}
+.reduce-motion .btn:active:not(:disabled) {
+  transform: none;
+}
 .modal-close {
   background: none;
   border: 0;
-  color: #b9a6d6;
+  color: #b5cbca;
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
@@ -47,17 +70,17 @@
   display: grid;
   gap: 4px;
   font-size: 14px;
-  color: #b9a6d6;
+  color: #b5cbca;
 }
 .field input,
 .field select {
   font:
-    16px Arial,
+    16px 'Nunito Sans',
     sans-serif; /* 16px stops iOS zooming on focus */
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #5b3a8c;
-  background: #1a0f2e;
+  border: 1px solid #41646b;
+  background: #11271f;
   color: #fff6e0;
   min-width: 0;
 }
@@ -71,18 +94,18 @@
 }
 .btn {
   font:
-    bold 16px Arial,
+    bold 16px 'Nunito Sans',
     sans-serif;
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid #5b3a8c;
-  background: #3d2466;
+  border: 1px solid #41646b;
+  background: #365f54;
   color: #fff6e0;
   cursor: pointer;
 }
 .btn.primary {
-  background: #2fbf71;
-  border-color: #2fbf71;
+  background: #f3c65d;
+  border-color: #f3c65d;
 }
 .btn:disabled {
   opacity: 0.5;
@@ -92,14 +115,14 @@
   font-family: Consolas, Menlo, monospace;
   font-size: 13px;
   word-break: break-all;
-  background: #1a0f2e;
+  background: #102c35;
   padding: 6px 8px;
   border-radius: 6px;
   color: #fff6e0;
 }
 .note {
   font-size: 13px;
-  color: #b9a6d6;
+  color: #b5cbca;
   margin: 0;
 }
 .error {
@@ -121,7 +144,7 @@
   font-size: 14px;
 }
 .result dt {
-  color: #b9a6d6;
+  color: #b5cbca;
 }
 .result dd {
   margin: 0;
@@ -136,7 +159,7 @@
   display: grid;
   gap: 6px;
   font:
-    12px Arial,
+    12px 'Nunito Sans',
     sans-serif;
   color: #fff6e0;
   background: rgba(0, 0, 0, 0.75);
@@ -147,10 +170,64 @@
 .debug select,
 .debug button {
   font:
-    12px Arial,
+    12px 'Nunito Sans',
     sans-serif;
 }
 .debug summary {
   cursor: pointer;
   color: #ffb800;
+}
+
+.modal {
+  box-shadow: 0 0.5rem 0 #1d130d;
+  border-top: 0.3rem solid #e0a02a;
+}
+.modal h2 {
+  font-family: 'Bungee', sans-serif;
+  font-weight: 400;
+  font-size: 1.1rem;
+}
+.btn {
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease;
+  box-shadow: 0 0.2rem 0 #091f28;
+}
+.btn.primary {
+  color: #142f37;
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0.15rem);
+  box-shadow: none;
+}
+.btn:focus-visible,
+.modal-close:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 0.15rem solid #f3c65d;
+  outline-offset: 0.2rem;
+}
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal {
+    animation: none;
+  }
+  .btn {
+    transition: none;
+  }
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
 }

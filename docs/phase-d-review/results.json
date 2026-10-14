@@ -1,0 +1,34 @@
+{
+  "errors": [],
+  "wheel": [
+    10,
+    12,
+    15,
+    20,
+    25,
+    30
+  ],
+  "mini": {
+    "total": 60000,
+    "count": 60000,
+    "display": 1260000,
+    "server": 1260000,
+    "landed": 30
+  },
+  "cap": {
+    "total": 500000,
+    "bet": 100,
+    "display": 1760000,
+    "server": 1760000,
+    "capped": true,
+    "title": "MAX WIN"
+  },
+  "performance": {
+    "fps": 77.28828531232296,
+    "worst": 20.900000000001455,
+    "inFlight": 5
+  },
+  "maxConcurrent": 5,
+  "reduced": true,
+  "restored": true
+}

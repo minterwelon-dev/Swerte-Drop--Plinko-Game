@@ -6,8 +6,9 @@ export class BoardGeometry {
   cx = 0;
   /** y of peg row 0 */
   top = 0;
-  /** horizontal peg spacing = vertical row spacing */
+  /** Horizontal spacing; vertical spacing adapts to the reference board's aspect ratio. */
   gap = 0;
+  rowGap = 0;
   pegR = 0;
   ballR = 0;
   startY = 0;
@@ -19,22 +20,22 @@ export class BoardGeometry {
   set(rect: Rect, rows: number): this {
     this.rect = rect;
     this.rows = rows;
-    // Vertical budget: drop-in (0.9 gap + ball) + (rows - 1) rows + bins (~1.35 gap) = (rows + 1.55) gaps.
-    const gap = Math.min(rect.w / (rows + 2), rect.h / (rows + 1.6));
+    const gap = rect.w / (rows + 2);
     this.gap = gap;
     this.cx = rect.x + rect.w / 2;
-    this.top = rect.y + (rect.h - (rows + 1.55) * gap) / 2 + 1.2 * gap;
+    this.top = rect.y + rect.h * 0.13;
+    this.rowGap = (rect.h * 0.7) / (rows - 1);
     this.pegR = gap * 0.11;
     this.ballR = gap * 0.26;
-    this.startY = this.top - 0.9 * gap;
-    this.binY = this.top + (rows - 1) * gap + 0.95 * gap;
-    this.binW = gap * 0.9;
-    this.binH = gap * 0.8;
+    this.startY = rect.y + this.ballR * 1.25;
+    this.binH = rect.h * 0.12;
+    this.binY = rect.y + rect.h - this.binH * 0.65;
+    this.binW = gap * 0.95;
     return this;
   }
 
   rowY(row: number): number {
-    return this.top + row * this.gap;
+    return this.top + row * this.rowGap;
   }
 
   /** Row i has i + 3 pegs, j = 0..i + 2. */

@@ -1,0 +1,108 @@
+{
+  "normal": {
+    "state": "Idle",
+    "inFlight": 0,
+    "display": 102815,
+    "server": 102815
+  },
+  "rotated": {
+    "state": "Idle",
+    "inFlight": 0,
+    "display": 102708,
+    "server": 102708
+  },
+  "feature": {
+    "state": "Idle",
+    "inFlight": 0,
+    "display": 106658,
+    "server": 106658
+  },
+  "performance": {
+    "frames": 124,
+    "averageFps": 102.98147995168266,
+    "worstMs": 14.399999999999636,
+    "flying": 5
+  },
+  "errors": [],
+  "checks": [
+    "local fonts",
+    "real pointer input",
+    "button press motion",
+    "normal drop",
+    "turbo and skip",
+    "rows and risk",
+    "live rotation during drop",
+    "feature intro, wheel, skip and settlement",
+    "five balls at 4x CPU",
+    "reduced motion trails and modal"
+  ],
+  "date": "2026-10-14T06:41:55.985Z",
+  "production": {
+    "sizes": [
+      {
+        "name": "portrait",
+        "w": 390,
+        "h": 844,
+        "cw": 780,
+        "ch": 1688,
+        "cssW": 390,
+        "cssH": 844,
+        "debug": false,
+        "font": true
+      },
+      {
+        "name": "small-phone",
+        "w": 320,
+        "h": 568,
+        "cw": 640,
+        "ch": 1136,
+        "cssW": 320,
+        "cssH": 568,
+        "debug": false,
+        "font": true
+      },
+      {
+        "name": "landscape-mobile",
+        "w": 844,
+        "h": 390,
+        "cw": 1688,
+        "ch": 780,
+        "cssW": 844,
+        "cssH": 390,
+        "debug": false,
+        "font": true
+      },
+      {
+        "name": "desktop",
+        "w": 1440,
+        "h": 900,
+        "cw": 1440,
+        "ch": 900,
+        "cssW": 1440,
+        "cssH": 900,
+        "debug": false,
+        "font": true
+      },
+      {
+        "name": "desktop-resized",
+        "w": 1024,
+        "h": 768,
+        "cw": 1024,
+        "ch": 768,
+        "cssW": 1024,
+        "cssH": 768,
+        "debug": false,
+        "font": true
+      }
+    ],
+    "errors": [],
+    "requests": [
+      "http://127.0.0.1:4173/",
+      "http://127.0.0.1:4173/assets/index-BD04FFfz.js",
+      "http://127.0.0.1:4173/assets/index-Dwa7Html.css",
+      "http://127.0.0.1:4173/assets/bungee-latin-Dfnurram.woff2",
+      "http://127.0.0.1:4173/assets/nunito-sans-latin-BWQ3gi2K.woff2"
+    ],
+    "checkedAt": "2026-10-14T06:50:15.198Z"
+  }
+}

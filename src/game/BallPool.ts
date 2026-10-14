@@ -7,7 +7,7 @@ export class BallPool {
   private readonly balls: Ball[] = [];
 
   constructor(scene: Phaser.Scene, size: number) {
-    for (let i = 0; i < size; i++) this.balls.push(new Ball(scene));
+    for (let i = 0; i < size; i++) this.balls.push(new Ball(scene, i));
   }
 
   acquire(): Ball {

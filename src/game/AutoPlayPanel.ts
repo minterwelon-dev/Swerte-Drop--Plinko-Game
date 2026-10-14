@@ -2,6 +2,8 @@ import { gameConfig } from '../gameConfig';
 import { validateAutoSettings, type AutoPlaySettings } from '../state/AutoPlay';
 import { el, field, Modal, parseMoney } from '../utils/dom';
 import { formatMoney } from '../utils/format';
+import { reducedMotion } from '../utils/responsive';
+import { modalDuration } from './animation/ModalFx';
 
 const D = gameConfig.currencyDecimals;
 const toInput = (minor: number) => (minor / 10 ** D).toFixed(D);
@@ -26,6 +28,18 @@ export class AutoPlayPanel {
     this.loss.value = toInput(gameConfig.autoplay.defaultLossLimit);
 
     const start = el('button', { className: 'btn primary', type: 'submit' }, 'Start auto-drop');
+    this.loss.addEventListener('input', () => {
+      const wasDisabled = start.disabled;
+      const value = parseMoney(this.loss.value, D);
+      start.disabled = value === null || !Number.isFinite(value) || value <= 0;
+      if (wasDisabled && !start.disabled)
+        start.animate(
+          reducedMotion()
+            ? [{ opacity: 0.6 }, { opacity: 1 }]
+            : [{ transform: 'scale(.96)' }, { transform: 'scale(1)' }],
+          { duration: modalDuration(gameConfig.motion.toggleMs), easing: 'ease-out' },
+        );
+    });
     const form = el(
       'form',
       { className: 'modal-body', noValidate: true },

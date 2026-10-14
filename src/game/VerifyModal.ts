@@ -2,6 +2,7 @@ import { RISKS, ROWS_OPTIONS, type Risk, type Rows } from '../math/config';
 import { verifyRound } from '../math/fair';
 import { el, field, Modal } from '../utils/dom';
 import { formatMultiplier } from '../utils/format';
+import { stamp } from './animation/ModalFx';
 
 export interface VerifyInput {
   serverSeed: string;
@@ -105,5 +106,6 @@ export class VerifyModal {
       ]);
     }
     for (const [k, val] of rowsOut) this.out.append(el('dt', {}, k), el('dd', {}, val));
+    stamp(this.out);
   }
 }

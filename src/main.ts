@@ -2,9 +2,15 @@ import Phaser from 'phaser';
 import './styles.css';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
-import { bindResponsiveResize, readBrowserViewport, setViewport } from './utils/responsive';
+import { bindResponsiveResize, readBrowserViewport, RELAYOUT_EVENT, setViewport } from './utils/responsive';
 
-function start(): void {
+async function start(): Promise<void> {
+  // A stalled font request must never block iOS boot.
+  const fonts = Promise.all([
+    document.fonts.load('32px Bungee'),
+    document.fonts.load('700 24px "Nunito Sans"'),
+  ]);
+  await Promise.race([fonts.catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 1500))]);
   // Parent is created at runtime so Phaser never boots before <body> exists.
   const parent = document.createElement('div');
   parent.id = 'game';
@@ -28,6 +34,7 @@ function start(): void {
     scene: [BootScene, GameScene],
   });
   bindResponsiveResize(game);
+  void fonts.then(() => game.events.emit(RELAYOUT_EVENT)).catch(() => undefined);
   if (import.meta.env.DEV) (window as unknown as { __game: Phaser.Game }).__game = game;
 }
 

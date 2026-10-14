@@ -61,6 +61,10 @@ export class SoundManager {
     }
   }
 
+  wheelTick(): void {
+    this.blip(460, 0.035, 0.035, 'triangle');
+  }
+
   private applyVisibility(): void {
     const ctx = this.sound?.context;
     if (!ctx) return;
