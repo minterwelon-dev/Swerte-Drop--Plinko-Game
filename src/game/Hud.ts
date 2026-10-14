@@ -177,9 +177,11 @@ class Button {
     this.ambientMs += dt;
     this.idleMs += dt;
     if (this.kind === 'drop') {
-      const phase = this.ambientMs / (this.enabled ? gameConfig.motion.swayMs : gameConfig.motion.swayMs * 2);
+      const beat = Math.floor(
+        this.ambientMs / (this.enabled ? gameConfig.motion.marqueeMs : gameConfig.motion.marqueeMs * 2),
+      );
       for (let i = 0; i < this.bulbs.length; i++)
-        this.bulbs[i].setAlpha(this.still ? 1 : 0.85 + 0.15 * Math.sin(phase * Math.PI * 2 + i * 0.2));
+        this.bulbs[i].setAlpha(this.still || (i + beat) % 3 === 0 ? 1 : 0.45);
       if (!this.pressed && this.enabled && !this.still && this.idleMs > gameConfig.motion.idleMs) {
         this.root.setY(
           this.homeY - sd(3) * Math.max(0, Math.sin((this.idleMs / gameConfig.motion.idleMs) * Math.PI * 2)),
@@ -221,7 +223,15 @@ class Button {
     if (this.kind === 'link') return;
     const shadow = this.selected || this.pressed ? 2 : 7;
     const wideDrop = this.kind === 'drop' && w > h * 1.5;
-    for (const bulb of this.bulbs) bulb.setVisible(!wideDrop);
+    if (wideDrop)
+      // Top edge left to right, then bottom edge right to left, so the marquee runs around the pill.
+      for (let i = 0; i < 12; i++) {
+        const top = i < 6;
+        const k = top ? i : 11 - i;
+        this.bulbs[i]
+          .setPosition(sd(w * (-0.4 + k * 0.16)), sd(top ? -h / 2 : h / 2))
+          .setDisplaySize(sd(h * 0.22), sd(h * 0.27));
+      }
     if (this.kind === 'round' || (this.kind === 'drop' && !wideDrop)) {
       g.fillStyle(PALETTE.ink).fillCircle(0, sd(shadow), sd(w / 2 + 5));
       g.fillStyle(color).fillCircle(0, 0, sd(w / 2));

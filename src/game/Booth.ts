@@ -54,6 +54,7 @@ export class Booth {
               Math.sin(this.bump.progress * Math.PI * 4) * 3 * (1 - this.bump.progress),
       )
       .setY(this.signY - (still ? 0 : sd(100) * (1 - intro) ** 3));
+    const beat = Math.floor(this.elapsed / ANIM.marqueeMs);
     for (let i = 0; i < this.bulbs.length; i++) {
       const lit = this.chase.progress < 1 && Math.abs(i / this.bulbCount - this.chase.progress) < 0.08;
       this.bulbs[i].setAlpha(
@@ -61,8 +62,7 @@ export class Booth {
           ? 1
           : lit
             ? 1
-            : (0.925 + 0.075 * Math.sin((this.elapsed / ANIM.swayMs) * Math.PI * 2 + i)) *
-              Math.min(1, Math.max(0, intro * 2 - i / this.bulbCount)),
+            : ((i + beat) % 3 === 0 ? 1 : 0.45) * Math.min(1, Math.max(0, intro * 2 - i / this.bulbCount)),
       );
     }
     for (let i = 0; i < this.canopy.length; i++)

@@ -27,6 +27,8 @@ export const gameConfig = {
     chaseMs: 800,
     signBumpMs: 600,
     swayMs: 4000,
+    /** Bulb marquee step; 400 ms = 2.5 Hz, under the 3 Hz flash limit. */
+    marqueeMs: 400,
     idleMs: 6000,
     bigWinMs: [1200, 1800, 2500],
     streamers: [40, 80, 120],
