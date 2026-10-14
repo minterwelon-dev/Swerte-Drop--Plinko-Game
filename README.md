@@ -359,3 +359,13 @@ Still open:
 - The browser checks clear the stored choice through a new-document script, so system reduced-motion emulation is tested on its own.
 
 96 tests, build and lint pass. Phase B, Phase C, Phase D and confetti checks pass. Production JavaScript **1,294.42 kB raw / 349.61 kB gzip**.
+
+### Sound gating check (2026-10-14)
+
+Checked in headless Chrome with `--autoplay-policy=document-user-activation-required`. Output was muted, so these are state and call checks, not listening tests.
+
+- Before the first tap, the AudioContext is `suspended` and placeholder sounds create no oscillators. The first tap unlocks the context; a 16-row drop then plays its peg ticks and landing chord.
+- Hiding the tab for real (a second tab activated through CDP) suspends the context; returning resumes it. Faking `document.hidden` is not enough here, because Phaser's per-frame update resumes audio while frames keep running.
+- SOUND OFF silences drops and now **persists across reloads** (`swerte-muted`), as section 7 of the animation spec requires. Before this, mute reset on every reload.
+
+Not done: nobody has listened to the wheel ticks or the other synthesized placeholders. The spec's other audio hooks (release, win count loop, bulb chase, big-win sting, button press, modal open, stamp) have no sounds yet.

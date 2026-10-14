@@ -25,6 +25,12 @@ export class SoundManager {
 
   constructor(scene: Phaser.Scene) {
     this.sound = scene.sound instanceof Phaser.Sound.WebAudioSoundManager ? scene.sound : null;
+    try {
+      this.muted = localStorage.getItem('swerte-muted') === 'true';
+    } catch {
+      /* Storage may be disabled. */
+    }
+    if (this.sound) this.sound.mute = this.muted;
     // No autoplay: silent until the first user gesture.
     const unlock = () => {
       this.unlocked = true;
@@ -41,6 +47,11 @@ export class SoundManager {
   toggleMute(): void {
     this.muted = !this.muted;
     if (this.sound) this.sound.mute = this.muted;
+    try {
+      localStorage.setItem('swerte-muted', String(this.muted));
+    } catch {
+      /* Session preference still works. */
+    }
   }
 
   /** Peg hit: pitch rises with the row. */
