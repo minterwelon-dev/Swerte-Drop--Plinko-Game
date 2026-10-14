@@ -255,3 +255,110 @@ Rules:
 - Do not use real perya or casino brand names, logos or existing game art.
 - Do not add real-money wording; keep "PLAY MONEY" visible (sign, settings, verify screen).
 - Do not invent extra screens or features beyond this document; ask first.
+
+## 11. Session continuation handoff — 2026-10-14
+
+Read this section first when continuing in a new session. Sections 1–10 describe the original target; this section records the implementation and remaining acceptance work. Do not restart Phase A or assume that the unchecked acceptance checklist means nothing has been implemented.
+
+### Current checkout and user decisions
+
+- Project: `D:\Projects\_Other\Swerte-Drop--Plinko-Game`.
+- Branch: `continuation--work`; implementation commit: `821a0ddf18f0ff7ad6f33751b7bb41fba50cbdb4` (`feat: revamp perya visuals and gameplay animations`). Pushed to `origin/continuation--work`; not merged into `main`.
+- This handoff was added after that push. Check `git status` before editing; do not assume this document has been committed or pushed.
+- The user requested Filipino perya visuals, image-generated material assets with no generic AI-looking imagery, and retention of **Bungee and Nunito Sans**. Keep typography live, not baked into images.
+- Preserve the larger portrait board and compact controls. The user specifically rejected a cramped layout that made the 16-row board too small on phones.
+- The user rejected the original diamond-shaped chalk decorations and the original confetti fall. Both have been revised; do not restore the old versions.
+- Ponytail full is the working preference: smallest complete change, reuse existing modules, verify the affected behavior. The user also requested Caveman earlier; follow available skill instructions without introducing unnecessary workflow setup.
+- Commits must use the user's configured Git identity with **no assistant co-author trailer**. Existing historical commits were not rewritten.
+- Read `AGENTS.md` and `PROJECT_BRIEF.md` before implementation. Keep outcomes server-authoritative and avoid changing math, RGS, or state-machine behavior for visual work.
+
+### Completed implementation
+
+| Work | Current state |
+| --- | --- |
+| Phase A: visual layout | Generated canopy, wooden sign/counter and framed felt; local fonts; responsive portrait/landscape UI; compact portrait Setup controls; board enlarged on small phones. |
+| Phase B: core motion | Hopper release, ball hops/squash, pooled trails/peg flashes, bin impacts, win tags, balance/win count-up, history tickets, button/bet feedback, active-ball badge, skip/turbo. |
+| Phase C: polish | Booth entrance and ambient motion, BIG/MEGA/EPIC signs, modal transitions, auto controls, verify stamp, seed rotation, retry/resume handling, orientation fade, persisted REDUCE FX plus system reduced motion. |
+| Confetti correction | Two side bursts, staggered emission, varied velocity/drag, gravity, flutter, tumbling and edge-on flips. Independent particle layer survives the sign exit. Pool budgets remain 40/80/120, half in turbo, none in reduced motion. |
+| Phase D: feature presentation | Wooden intro/summary, weighted wheel with clack ticks and result bounce, staggered jackpot bins, max-five-ball queue, remaining count, running win total, Mini/Minor/Major celebrations and MAX WIN at the 5000x cap. Tap-to-collect, skip/turbo/reduced motion and reload recovery checked. |
+
+Phase D's running placard replaces the history strip, leaving the board and BOLA badge clear. Repeated identical jackpot hits retain the current named banner while individual tags and credited totals continue updating. Reloaded features drain to their settled summary without replaying the intro or wheel.
+
+### Important differences from the original specification
+
+- F1 uses the existing **FEATURE button**, not a newly invented bonus/scatter-bin trigger. Adding an outcome trigger would require separately scoped game-contract work.
+- The current contract contains Mini, Minor and Major; there is no Grand jackpot.
+- The optional idle hopper rattle is omitted. Do not add a replay control just because M10 mentions one; it is not part of this implementation.
+- The module list in section 6 was a proposal. Ball travel and peg effects stay in existing `Ball`, `BallPath`, `Board` and `Bins`; ambient booth effects live in `Booth`. Do not create duplicate `BallAnimator`, `BoardEffects` or `Ambient` classes merely to match that list.
+- `AnimDirector` coordinates presentation; existing scene/state wiring owns settlement. Preserve the implemented APIs rather than replacing them with the illustrative interface above.
+- Public timing/budget settings live in `src/gameConfig.ts` under `motion` and `feature`; `animation/animConfig.ts` exposes the shared `ANIM` alias.
+
+### Where to continue in the code
+
+| Concern | Files |
+| --- | --- |
+| Layout, fonts, depths | `src/constants.ts`, `src/utils/responsive.ts`, `src/game/Hud.ts` |
+| Material art and provenance | `Assets/art/README.md`, `Assets/art/source/*-prompt.txt`, source PNGs and runtime WebPs |
+| Current board art | `Assets/art/board-v2.webp`; v1 is retained for provenance only. Diamonds are mirrored Phaser stencils over the corrected generated felt. |
+| Core travel and board feedback | `src/game/Ball.ts`, `BallPath.ts`, `BallPool.ts`, `Board.ts`, `Bins.ts` |
+| Booth and shared UI motion | `src/game/Booth.ts`, `src/game/animation/`, `src/utils/dom.ts`, `src/styles.css` |
+| Confetti | `src/game/animation/confettiMotion.ts`, `BigWin.ts`, `tests/confettiMotion.test.ts` |
+| Feature presentation | `src/game/FeatureOverlay.ts`, `Bins.ts`, `animation/BigWin.ts`, `src/scenes/GameScene.ts`, `SoundManager.ts` |
+| Timing controls | `src/gameConfig.ts` (`motion`, `feature`) |
+| Validation history | Latest milestone sections in `README.md`; `docs/*-review/` scripts, screenshots, results and recordings |
+
+The board, canopy and wood use generated raster art; labels, interactive geometry and particles remain runtime objects. New raster art should use the imagegen skill, preserve prompts/source files, and match the existing perya materials. Do not regenerate approved art unnecessarily.
+
+### Latest verified evidence
+
+These are recorded results from the implementation session, not a guarantee about a future checkout. Re-run relevant checks after changes.
+
+- **96 Vitest tests passed**, TypeScript/Vite build and ESLint passed.
+- Phase D browser assertions: six wheel results (10/12/15/20/25/30), all three named jackpots, exact 5000x capped settlement, tap-to-collect, skip, turbo, max five concurrent balls, reload recovery, and system reduced motion. No runtime exceptions; display/server balances matched after settlement.
+- Latest feature layouts: 390x844, 360x640 and 1280x720, including rotation during play. Earlier phases also reviewed desktop layouts up to 1920x1080; this does not prove every size/state combination.
+- Feature performance sample: **77.3 FPS average**, **20.9 ms worst frame**, five balls in flight, 900 ms at 390x844/DPR 2 with 4x CPU throttle in focused headless Chrome/SwiftShader. This is a short desktop-emulation sample, not physical-device acceptance.
+- Production JS: **1,294.88 kB raw / 349.74 kB gzip**; CSS **3.03 / 1.18 kB**; HTML **0.57 / 0.38 kB**. Runtime generated art: **207,214 bytes**. Production scan found no debug panel, forced-outcome handling or `console.error`.
+- Latest evidence: [Phase D results](docs/phase-d-review/results.json), [feature preview](docs/phase-d-review/feature-preview.webm), [browser check](docs/phase-d-review/check.mjs). Confetti-specific evidence: [confetti preview](docs/confetti-review/confetti-preview.webm) and [check](docs/confetti-review/check.mjs).
+- Older README paragraphs saying Phase C or D is pending describe earlier milestones; the later Phase D entry and this handoff supersede them.
+
+### Next step: acceptance and device validation
+
+Implementation of Phases A–D is complete within the contract above. The next session should validate and fix concrete issues, not start another unsolicited redesign.
+
+1. Read this handoff, check the working tree and current commit, and review the latest feature/confetti recordings. Incorporate any new user feedback first; implementation completion does not imply final visual approval.
+2. Finish section 9's acceptance audit against current source and browser behavior. Only check an item when its complete requirement has evidence. In particular, audit flash frequency and allocation/pooling claims rather than assuming the entire checklist passed.
+3. Test real Android Chrome and iOS Safari/WKWebView if devices are available: sustained five-ball play, jackpots/confetti, 16-row portrait readability, live rotation, reduced motion and background/resume behavior. If unavailable, report the gap; do not substitute emulation as proof.
+4. Review wheel-tick sound audibly and check gesture/mute/visibility gating. Prior browser validation was muted; it did not establish audible quality.
+5. Fix confirmed problems at the owning module, run focused tests/browser checks, and update README evidence and bundle sizes if implementation changes.
+6. Keep publishing/merging separate from local validation. The prior push was to `continuation--work`; do not claim `main` or the deployed demo contains these changes without checking.
+
+Known limitation: dense 16-row multiplier labels remain small on narrow phones; tapping a bin shows its larger multiplier/probability tooltip. Physical-device performance, Safari animation behavior and sustained-load acceptance remain open.
+
+### Commands and browser-check setup
+
+Use PowerShell and `npm.cmd` if execution policy blocks the npm alias:
+
+```powershell
+cd "D:\Projects\_Other\Swerte-Drop--Plinko-Game"
+git status --short
+npm.cmd test
+npm.cmd run build
+npm.cmd run lint
+npm.cmd run dev -- --host 127.0.0.1
+```
+
+For the existing CDP checks, run the dev server on port **5173** and a separate muted Chrome instance with remote debugging on **9339**, using an isolated temporary profile. The scripts select the first page target, so use a dedicated instance. Then, in another terminal:
+
+```powershell
+node docs/phase-d-review/check.mjs
+# Run this separately when changing confetti:
+node docs/confetti-review/check.mjs
+```
+
+The scripts use development-only forced outcomes and overwrite their review artifacts. Keep test audio muted without changing production audio. No validation browser or dev server was intentionally left running at handoff. Check port ownership before starting or stopping processes.
+
+Recorder note: Phase D exports the recorded base64 video in small CDP chunks; a single large response previously stalled the recorder check. Performance sampling runs separately from recording. Preserve these fixture fixes.
+
+Suggested new-session prompt:
+
+> Read AGENTS.md, PROJECT_BRIEF.md and section 11 of SWERTE_UI_ANIMATION_SPEC.md. Continue from the pushed Phase D implementation on continuation--work. Preserve the perya art, Bungee/Nunito Sans, enlarged portrait board and revised confetti. Start with the remaining acceptance/device-validation work, use existing modules, and report gaps honestly. Do not add assistant co-author trailers to commits.
