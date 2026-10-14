@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DEPTH, PALETTE, TIER_COLOR, type Tier } from '../constants';
 import { binProbabilities } from '../math/binomial';
 import type { MultiplierX100, Risk, Rows } from '../math/config';
+import { FEATURE_BINS, FEATURE_ROWS } from '../math/feature';
 import { MULTIPLIERS } from '../math/multipliers';
 import { formatMultiplier, formatMultiplierShort, formatProbability } from '../utils/format';
 import { sd, sx, sy } from '../utils/responsive';
@@ -28,6 +29,17 @@ export function tierFor(m100: MultiplierX100): Tier {
 export function classicBinDefs(rows: Rows, risk: Risk): BinDef[] {
   const p = binProbabilities(rows);
   return MULTIPLIERS[risk][rows].map((m, k) => ({ multiplierX100: m, tier: tierFor(m), probability: p[k] }));
+}
+
+/** Stage B feature bins: coin multipliers plus Mini, Minor and Major jackpot bins. */
+export function featureBinDefs(): BinDef[] {
+  const p = binProbabilities(FEATURE_ROWS);
+  return FEATURE_BINS.map((b, k) => ({
+    multiplierX100: b.multiplierX100,
+    tier: b.jackpot ?? tierFor(b.multiplierX100),
+    probability: p[k],
+    label: b.jackpot && b.jackpot[0].toUpperCase() + b.jackpot.slice(1),
+  }));
 }
 
 const MAX_BINS = 17;
@@ -121,16 +133,21 @@ export class Bins {
     if (this.tipBin >= 0) this.showTip(this.tipBin);
   }
 
+  tierOf(k: number): Tier {
+    return this.defs[k].tier;
+  }
+
   /** Landing feedback for bin k. */
-  land(k: number, m100: MultiplierX100): void {
-    if (!this.geo) return;
+  land(k: number): void {
+    const def = this.defs[k];
+    if (!this.geo || !def) return;
     this.bounce[k] = BOUNCE_MS;
     const p = this.popups[this.nextPopup];
     this.popupLife[this.nextPopup] = POPUP_MS;
     this.popupY[this.nextPopup] = this.geo.binY - this.geo.binH;
     this.nextPopup = (this.nextPopup + 1) % POPUP_POOL;
-    p.setText(formatMultiplier(m100))
-      .setColor(`#${TIER_COLOR[tierFor(m100)].toString(16).padStart(6, '0')}`)
+    p.setText(def.label ?? formatMultiplier(def.multiplierX100))
+      .setColor(`#${TIER_COLOR[def.tier].toString(16).padStart(6, '0')}`)
       .setPosition(sx(this.geo.binX(k)), sy(this.geo.binY - this.geo.binH))
       .setAlpha(1)
       .setVisible(true);
@@ -164,7 +181,8 @@ export class Bins {
     const def = this.defs[k];
     if (!geo || !def) return;
     this.tipBin = k;
-    this.tip.setText(`${formatMultiplier(def.multiplierX100)}\n${formatProbability(def.probability)}`);
+    const name = def.label ? `${def.label} ` : '';
+    this.tip.setText(`${name}${formatMultiplier(def.multiplierX100)}\n${formatProbability(def.probability)}`);
     // Keep the tooltip inside the board horizontally.
     const half = this.tip.width / 2 + sd(16);
     const x = Math.min(Math.max(sx(geo.binX(k)), sx(geo.rect.x) + half), sx(geo.rect.x + geo.rect.w) - half);

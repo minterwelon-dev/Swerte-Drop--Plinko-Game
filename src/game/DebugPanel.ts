@@ -79,6 +79,7 @@ export class DebugPanel {
           bin,
           btn('Force bin', () => force(() => Number(bin.value) || 0, `bin ${bin.value || 0}`)),
         ),
+        el('div', {}, 'Applies to the next drop, or to all 30 balls of the next feature.'),
         status,
         btn('Reset session', () => {
           localStorage.clear();

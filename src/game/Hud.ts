@@ -13,6 +13,8 @@ export interface HudEvents {
   onSkip(): void;
   onAuto(): void;
   onFair(): void;
+  /** Simulated scatter trigger for the Stage B feature. */
+  onFeature(): void;
   onSound(): void;
 }
 
@@ -31,6 +33,7 @@ export interface HudState {
   autoLabel: string;
   autoRunning: boolean;
   canAuto: boolean;
+  canFeature: boolean;
   soundOn: boolean;
   /** Deferred assets still loading: Drop shows "Loading". */
   loading: boolean;
@@ -75,7 +78,7 @@ class Button {
   }
 }
 
-/** Balance, last win, bet, rows, risk, turbo, drop, skip, auto, fairness, sound. Emits intents; never calls the RGS. */
+/** Balance, last win, bet, rows, risk, turbo, drop, skip, auto, feature, fairness, sound. Emits intents; never calls the RGS. */
 export class Hud {
   private readonly bg: Phaser.GameObjects.Graphics;
   private readonly captions: Phaser.GameObjects.Text[] = [];
@@ -92,6 +95,7 @@ export class Hud {
   private readonly skip: Button;
   private readonly auto: Button;
   private readonly fair: Button;
+  private readonly feature: Button;
   private readonly soundBtn: Button;
 
   constructor(scene: Phaser.Scene, ev: HudEvents) {
@@ -118,6 +122,7 @@ export class Hud {
     this.skip = new Button(scene, 'Skip', PALETTE.button, ev.onSkip);
     this.auto = new Button(scene, 'Auto', PALETTE.button, ev.onAuto);
     this.fair = new Button(scene, 'Fairness', PALETTE.button, ev.onFair);
+    this.feature = new Button(scene, 'Feature', PALETTE.button, ev.onFeature);
     this.soundBtn = new Button(scene, 'Sound', PALETTE.button, ev.onSound);
   }
 
@@ -170,9 +175,11 @@ export class Hud {
     this.turbo.layout(ax, ay, inner * 0.24, bh, font);
     this.drop.layout(ax + inner * 0.26, ay, inner * 0.48, bh, font * 1.4);
     this.skip.layout(ax + inner * 0.76, ay, inner * 0.24, bh, font);
-    const tools = [this.auto, this.fair, this.soundBtn];
+    const tools = [this.auto, this.feature, this.fair, this.soundBtn];
+    const toolW = inner / tools.length;
     for (let i = 0; i < tools.length; i++) {
-      tools[i].layout(ax + (inner / 3) * i, rowY(6) + bOff, inner / 3 - pad, bh, font);
+      // Four tools share the row: smaller text so "Sound off" fits the narrow landscape panel.
+      tools[i].layout(ax + toolW * i, rowY(6) + bOff, toolW - pad, bh, font * 0.8);
     }
     this.message.setPosition(sx(p.x + p.w / 2), sy(rowY(5) - pad / 2)).setFontSize(sd(font * 0.8));
   }
@@ -190,6 +197,7 @@ export class Hud {
     this.drop.set(s.canDrop && !s.loading, false, s.loading ? 'Loading' : 'DROP');
     this.skip.set(s.canSkip);
     this.auto.set(s.canAuto || s.autoRunning, s.autoRunning, s.autoLabel);
+    this.feature.set(s.canFeature);
     this.fair.set(true);
     this.soundBtn.set(true, false, s.soundOn ? 'Sound on' : 'Sound off');
     this.message.setText(s.message);

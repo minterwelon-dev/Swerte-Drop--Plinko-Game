@@ -10,6 +10,12 @@ export type PlinkoState =
   | 'FeatureDropping'
   | 'FeatureSummary';
 
+const FEATURE_PREV = {
+  BallCountWheel: 'FeatureIntro',
+  FeatureDropping: 'BallCountWheel',
+  FeatureSummary: 'FeatureDropping',
+} as const;
+
 /**
  * Single source of truth for round flow and the display/server balance split.
  * The server settles instantly; the display balance only moves when a drop starts (bet) or a ball lands (win).
@@ -42,9 +48,14 @@ export class PlinkoStateMachine {
     return this.state === 'Idle';
   }
 
-  /** Bet is locked only while auto-drop runs (its limits were set for that bet). */
+  /** Bet is locked while auto-drop runs (its limits were set for that bet) and during the feature. */
   canChangeBet(): boolean {
-    return this.state !== 'AutoRunning';
+    return this.state === 'Idle' || this.state === 'Dropping';
+  }
+
+  /** The feature takes over the board, so it starts only with an empty one. */
+  canStartFeature(): boolean {
+    return this.state === 'Idle' && this.inFlight === 0;
   }
 
   /** Rows and risk may only change with an empty board. */
@@ -80,6 +91,42 @@ export class PlinkoStateMachine {
     for (const r of rounds) this.displayBalance -= r.win;
     this.inFlight += rounds.length;
     this.to('Dropping');
+  }
+
+  /** Scatter trigger. */
+  startFeature(): void {
+    if (!this.canStartFeature()) throw new Error(`feature cannot start in ${this.state}`);
+    this.to('FeatureIntro');
+  }
+
+  /** Refresh mid-feature: the server balance already includes the total; it is credited as balls land. */
+  resumeFeature(totalWin: number): void {
+    this.startFeature();
+    this.displayBalance -= totalWin;
+  }
+
+  /** FeatureIntro -> BallCountWheel -> FeatureDropping -> FeatureSummary, in that order only. */
+  featureStep(next: 'BallCountWheel' | 'FeatureDropping' | 'FeatureSummary'): void {
+    const from = FEATURE_PREV[next];
+    if (this.state !== from) throw new Error(`${next} from ${this.state}, expected ${from}`);
+    this.to(next);
+  }
+
+  /** A feature ball landed: credit its (cap-limited) share of the total. */
+  featureCredit(win: number): void {
+    devAssert(this.state === 'FeatureDropping', `feature credit in ${this.state}`);
+    this.displayBalance += win;
+  }
+
+  /** Summary closed, or the request failed before the wheel. */
+  endFeature(): void {
+    if (this.state !== 'FeatureSummary' && this.state !== 'FeatureIntro')
+      throw new Error(`feature cannot end in ${this.state}`);
+    devAssert(
+      this.displayBalance === this.serverBalance,
+      `display ${this.displayBalance} != server ${this.serverBalance} after the feature`,
+    );
+    this.to('Idle');
   }
 
   /** Request failed before settling: refund the display debit. */

@@ -1,4 +1,5 @@
 import type { MultiplierX100, Risk, Rows } from '../math/config';
+import type { FeatureBall } from '../math/feature';
 
 export interface DropRequest {
   sessionId: string;
@@ -33,12 +34,37 @@ export interface RotateResponse {
   newServerSeedHash: string;
 }
 
+/** The seed pair the client expects the feature to be played under; stale refs are rejected. */
+export type SeedRef = Pick<SeedState, 'serverSeedHash' | 'clientSeed'>;
+
+/** Stage B feature trigger. In the slot this follows 3 scatters; the triggering spin already paid the bet. */
+export interface FeatureRequest {
+  sessionId: string;
+  bet: number;
+  seedRef: SeedRef;
+}
+
+export interface FeatureResult {
+  roundId: string;
+  /** Wheel nonce; ball i used nonce + 1 + i. */
+  nonce: number;
+  serverSeedHash: string;
+  clientSeed: string;
+  bet: number;
+  balls: FeatureBall[];
+  totalWin: number;
+  capped: boolean;
+  balance: number; // after the feature
+}
+
 export interface SessionInit {
   sessionId: string;
   balance: number;
   seed: SeedState;
   /** Rounds settled on the server whose landing the client never acknowledged (refresh mid-drop). */
   pending: DropResponse[];
+  /** Feature settled on the server but never acknowledged (refresh mid-feature). */
+  pendingFeature: FeatureResult | null;
 }
 
 export type RGSErrorCode = 'NETWORK' | 'INSUFFICIENT_FUNDS' | 'BAD_REQUEST' | 'BAD_SESSION';

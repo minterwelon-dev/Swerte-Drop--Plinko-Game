@@ -1,17 +1,19 @@
 import Phaser from 'phaser';
 import { gameConfig } from '../gameConfig';
 import type { Risk, Rows } from '../math/config';
+import { FEATURE_ROWS } from '../math/feature';
 import { MockRGS } from '../rgs/MockRGS';
 import type { RGS } from '../rgs/RGS';
-import { RGSError, type DropResponse, type SeedState } from '../rgs/types';
+import { RGSError, type DropResponse, type FeatureResult, type SeedState } from '../rgs/types';
 import { AUTO_STOP_TEXT, AutoPlay, type AutoPlaySettings } from '../state/AutoPlay';
 import { PlinkoStateMachine } from '../state/PlinkoStateMachine';
 import { AutoPlayPanel } from '../game/AutoPlayPanel';
-import { Ball, type BallEvents } from '../game/Ball';
+import { Ball, type BallEvents, type BallRound } from '../game/Ball';
 import { BallPool } from '../game/BallPool';
-import { Bins, classicBinDefs, tierFor } from '../game/Bins';
+import { Bins, classicBinDefs, featureBinDefs } from '../game/Bins';
 import { Board } from '../game/Board';
 import { DebugPanel, devRgsOptions } from '../game/DebugPanel';
+import { FeatureOverlay } from '../game/FeatureOverlay';
 import { HistoryStrip } from '../game/HistoryStrip';
 import { Hud } from '../game/Hud';
 import { RetryModal } from '../game/RetryModal';
@@ -24,6 +26,22 @@ import { currentLayout, RELAYOUT_EVENT, syncViewport } from '../utils/responsive
 import { DEFERRED_READY } from './BootScene';
 
 const MESSAGE_MS = 3000;
+
+/** A feature round being presented: balls launch in sequence and credit the display balance as they land. */
+interface FeatureRun {
+  res: FeatureResult;
+  balls: BallRound[];
+  /** Next ball to launch. */
+  next: number;
+  flying: number;
+  landed: number;
+  /** Uncapped sum of landed wins; credits stop at the server's capped total. */
+  sum: number;
+  credited: number;
+  waitMs: number;
+  skip: boolean;
+  done: () => void;
+}
 
 /** Wiring only: creates modules, calls the RGS, feeds responses to the state machine and presenters. */
 export class GameScene extends Phaser.Scene {
@@ -40,6 +58,8 @@ export class GameScene extends Phaser.Scene {
   private seedPanel!: SeedPanel;
   private verifyModal!: VerifyModal;
   private retry!: RetryModal;
+  private overlay!: FeatureOverlay;
+  private feat: FeatureRun | null = null;
   private bet = gameConfig.defaultBet;
   private rows: Rows = gameConfig.defaultRows;
   private risk: Risk = gameConfig.defaultRisk;
@@ -62,7 +82,7 @@ export class GameScene extends Phaser.Scene {
       this.board.flashPeg(row, peg);
       this.sfx.tick(row, this.board.geo.rows);
     },
-    onLand: (ball) => this.onLand(ball),
+    onLand: (ball) => (this.feat ? this.onFeatureLand(ball) : this.onLand(ball)),
   };
 
   constructor() {
@@ -81,6 +101,7 @@ export class GameScene extends Phaser.Scene {
     this.sfx = new SoundManager(this);
     this.retry = new RetryModal();
     this.verifyModal = new VerifyModal();
+    this.overlay = new FeatureOverlay(this);
     this.autoPanel = new AutoPlayPanel((s) => this.startAuto(s));
     this.seedPanel = new SeedPanel({
       setClientSeed: (s) => this.setClientSeed(s),
@@ -96,9 +117,14 @@ export class GameScene extends Phaser.Scene {
         this.turbo = !this.turbo;
         this.refreshHud();
       },
-      onSkip: () => this.pool.skipAll(),
+      onSkip: () => {
+        this.pool.skipAll();
+        this.overlay.skip();
+        if (this.feat) this.feat.skip = true;
+      },
       onAuto: () => this.toggleAuto(),
       onFair: () => this.sm && this.seedPanel.open(this.seed, this.sm.state === 'Idle'),
+      onFeature: () => void this.triggerFeature(),
       onSound: () => {
         this.sfx.toggleMute();
         this.refreshHud();
@@ -125,6 +151,8 @@ export class GameScene extends Phaser.Scene {
       if (this.messageMs <= 0) this.setMessage('');
     }
     this.autoTick(dt);
+    this.featureTick(dt);
+    this.overlay.update(dt);
     this.pool.update(
       dt,
       this.turbo ? gameConfig.turboRowMs : gameConfig.rowMs,
@@ -141,7 +169,8 @@ export class GameScene extends Phaser.Scene {
       this.sessionId = init.sessionId;
       this.seed = init.seed;
       this.sm = new PlinkoStateMachine(init.balance, gameConfig.maxBalls);
-      this.resume(init.pending);
+      if (init.pendingFeature) void this.resumeFeature(init.pendingFeature);
+      else this.resume(init.pending);
     } catch (e) {
       this.setMessage(e instanceof RGSError ? 'Could not connect. Reload to retry.' : String(e));
     }
@@ -165,7 +194,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private loadDeferred(): void {
-    // No deferred files yet (sounds are synthesized; feature art arrives in Phase 4); the gate is wired for them.
+    // No deferred files yet (sounds are synthesized, feature art is drawn at runtime); the gate is wired for them.
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       this.registry.set(DEFERRED_READY, true);
       this.refreshHud();
@@ -248,12 +277,143 @@ export class GameScene extends Phaser.Scene {
     const res = ball.res;
     ball.release();
     if (!res || !this.sm) return;
-    this.bins.land(res.bin, res.multiplierX100);
+    this.bins.land(res.bin);
     this.history.push(res.multiplierX100);
-    this.sfx.land(tierFor(res.multiplierX100));
+    this.sfx.land(this.bins.tierOf(res.bin));
     this.lastWin = res.win;
     this.sm.ballLanded(res.win);
     void this.rgs.ack(res.roundId).then(() => this.known.delete(res.roundId));
+    this.refreshHud();
+  }
+
+  // --- Stage B Plinko Feature ---
+
+  /** Simulated scatter trigger. The request runs while the intro plays. */
+  private async triggerFeature(): Promise<void> {
+    const sm = this.sm;
+    if (!sm?.canStartFeature() || !this.registry.get(DEFERRED_READY)) return;
+    sm.startFeature();
+    this.refreshHud();
+    const request = this.requestFeature(this.bet);
+    await this.overlay.intro('Scatter trigger!\nTap to spin');
+    const res = await request;
+    if (!res) {
+      this.overlay.hide();
+      sm.endFeature();
+      this.refreshHud();
+      return;
+    }
+    await this.playFeature(res);
+  }
+
+  /** Refresh mid-feature: replay the settled feature; its total is credited as the balls land again. */
+  private async resumeFeature(res: FeatureResult): Promise<void> {
+    this.sm?.resumeFeature(res.totalWin);
+    this.refreshHud();
+    await this.overlay.intro('Resuming your feature');
+    await this.playFeature(res);
+  }
+
+  private async requestFeature(bet: number): Promise<FeatureResult | null> {
+    for (;;) {
+      try {
+        const { serverSeedHash, clientSeed } = this.seed;
+        return await this.rgs.feature({
+          sessionId: this.sessionId,
+          bet,
+          seedRef: { serverSeedHash, clientSeed },
+        });
+      } catch (e) {
+        if (!(e instanceof RGSError) || e.code !== 'NETWORK') {
+          this.setMessage('Feature failed');
+          return null;
+        }
+        // A feature that settled with only the response lost is picked up instead of played twice.
+        const lost = await this.rgs.init().then(
+          (i) => i.pendingFeature,
+          () => null,
+        );
+        if (lost) return lost;
+        if (!(await this.retry.ask('The feature request did not reach the server.'))) return null;
+      }
+    }
+  }
+
+  private async playFeature(res: FeatureResult): Promise<void> {
+    const sm = this.sm;
+    if (!sm) return;
+    for (const b of res.balls)
+      devAssert(b.path.reduce((s, x) => s + x, 0) === b.bin, `sum(path) != bin in feature ${res.roundId}`);
+    sm.serverSettled(res.balance);
+    if (res.serverSeedHash === this.seed.serverSeedHash)
+      this.seed = { ...this.seed, nonce: Math.max(this.seed.nonce, res.nonce + 1 + res.balls.length) };
+
+    sm.featureStep('BallCountWheel');
+    this.refreshHud();
+    await this.overlay.spin(res.balls.length, this.turbo);
+
+    sm.featureStep('FeatureDropping');
+    await new Promise<void>((done) => {
+      const balls = res.balls.map((b) => ({ ...b, roundId: res.roundId }));
+      this.feat = {
+        res,
+        balls,
+        next: 0,
+        flying: 0,
+        landed: 0,
+        sum: 0,
+        credited: 0,
+        waitMs: 0,
+        skip: false,
+        done,
+      };
+      this.showBoard();
+      this.overlay.running(0, balls.length, 0, false);
+      this.refreshHud();
+    });
+
+    sm.featureStep('FeatureSummary');
+    this.lastWin = res.totalWin;
+    this.refreshHud();
+    await this.overlay.summary(res);
+    this.feat = null;
+    this.overlay.hide();
+    this.showBoard();
+    sm.endFeature();
+    void this.rgs.ack(res.roundId);
+    this.refreshHud();
+  }
+
+  /** Launches feature balls in a rapid sequence, at most maxBalls in flight. Skip launches the rest at once. */
+  private featureTick(dt: number): void {
+    const f = this.feat;
+    if (!f || f.next >= f.balls.length) return;
+    f.waitMs -= dt;
+    while (f.next < f.balls.length && f.flying < gameConfig.maxBalls && (f.skip || f.waitMs <= 0)) {
+      const ball = this.pool.acquire();
+      ball.hold(this.board.geo);
+      ball.launch(f.balls[f.next++], this.board.geo);
+      ball.skipping = f.skip;
+      f.flying++;
+      f.waitMs = this.turbo ? gameConfig.feature.turboLaunchMs : gameConfig.feature.launchMs;
+    }
+  }
+
+  private onFeatureLand(ball: Ball): void {
+    const f = this.feat;
+    const r = ball.res;
+    ball.release();
+    if (!f || !r || !this.sm) return;
+    f.flying--;
+    f.landed++;
+    f.sum += r.win;
+    this.bins.land(r.bin);
+    this.sfx.land(this.bins.tierOf(r.bin));
+    const credit = Math.min(f.sum, f.res.totalWin) - f.credited;
+    f.credited += credit;
+    this.sm.featureCredit(credit);
+    this.overlay.running(f.landed, f.balls.length, f.credited, f.res.capped && f.credited === f.res.totalWin);
+    if (f.landed === f.balls.length) f.done();
     this.refreshHud();
   }
 
@@ -363,12 +523,18 @@ export class GameScene extends Phaser.Scene {
 
   private relayout(): void {
     const layout = currentLayout();
-    this.board.relayout(layout, this.rows);
-    this.bins.setBins(classicBinDefs(this.rows, this.risk), this.board.geo);
+    this.showBoard(layout);
     this.pool.relayout(this.board.geo);
     this.history.relayout(layout);
     this.hud.relayout(layout);
+    this.overlay.relayout(layout);
     this.refreshHud();
+  }
+
+  /** The feature board while a feature drops, else the classic board for the selected rows and risk. */
+  private showBoard(layout = currentLayout()): void {
+    this.board.relayout(layout, this.feat ? FEATURE_ROWS : this.rows);
+    this.bins.setBins(this.feat ? featureBinDefs() : classicBinDefs(this.rows, this.risk), this.board.geo);
   }
 
   private setMessage(text: string): void {
@@ -390,10 +556,11 @@ export class GameScene extends Phaser.Scene {
       canDrop: !!sm && sm.canDrop(this.bet),
       canChangeBoard: !!sm && sm.canChangeBoard(),
       canChangeBet: !!sm && sm.canChangeBet(),
-      canSkip: !!sm && sm.inFlight > 0,
+      canSkip: !!sm && (sm.inFlight > 0 || this.feat !== null),
       autoLabel: autoRunning ? `Stop ${this.auto!.roundsLeft}` : 'Auto',
       autoRunning,
       canAuto: !!sm && sm.canStartAuto(),
+      canFeature: !!sm && sm.canStartFeature() && !!this.registry.get(DEFERRED_READY),
       soundOn: !this.sfx.muted,
       loading: !this.registry.get(DEFERRED_READY),
       message: this.message,

@@ -1,12 +1,15 @@
 import { BET_LEVELS, RISKS, ROWS_OPTIONS } from '../math/config';
 import { buildDrop } from '../math/drop';
 import { derivePath, sha256Hex } from '../math/fair';
+import { BALL_WHEEL, buildFeature, deriveFeature, FEATURE_ROWS } from '../math/feature';
 import { Rng, cryptoHex, cryptoSeed } from '../math/rng';
 import type { RGS } from './RGS';
 import {
   RGSError,
   type DropRequest,
   type DropResponse,
+  type FeatureRequest,
+  type FeatureResult,
   type RotateResponse,
   type SeedState,
   type SessionInit,
@@ -37,6 +40,8 @@ interface PersistedState {
   nonce: number;
   roundCounter: number;
   pending: DropResponse[];
+  /** Absent in saves from before Phase 4. */
+  pendingFeature?: FeatureResult | null;
 }
 
 export function memoryStore(): KeyValueStore {
@@ -76,6 +81,7 @@ export class MockRGS implements RGS {
       balance: s.balance,
       seed: this.seedState(s),
       pending: [...s.pending],
+      pendingFeature: s.pendingFeature ?? null,
     }));
   }
 
@@ -117,9 +123,50 @@ export class MockRGS implements RGS {
     });
   }
 
+  /** Free bonus round: no bet is taken (the triggering slot spin paid it); the capped total is credited. */
+  async feature(req: FeatureRequest): Promise<FeatureResult> {
+    await this.network();
+    return this.serial(async (s) => {
+      if (req.sessionId !== s.sessionId) throw new RGSError('BAD_SESSION', 'unknown session');
+      if (!(BET_LEVELS as readonly number[]).includes(req.bet))
+        throw new RGSError('BAD_REQUEST', `bad bet ${req.bet}`);
+      if (req.seedRef.serverSeedHash !== this.serverSeedHash || req.seedRef.clientSeed !== s.clientSeed)
+        throw new RGSError('BAD_REQUEST', 'stale seed reference');
+      if (s.pendingFeature) throw new RGSError('BAD_REQUEST', 'feature already in progress');
+
+      const nonce = s.nonce;
+      let outcome = await deriveFeature(s.serverSeed, s.clientSeed, nonce, req.bet);
+      if (import.meta.env.DEV && this.forcer) {
+        // Forced feature: the most balls, every one forced. Forcing the edge demonstrates the cap.
+        const forcer = this.forcer;
+        this.forcer = null;
+        const most = BALL_WHEEL[BALL_WHEEL.length - 1].balls;
+        outcome = buildFeature(
+          Array.from({ length: most }, () => forcer(FEATURE_ROWS)),
+          req.bet,
+        );
+      }
+      s.nonce = nonce + 1 + outcome.balls.length;
+      s.balance += outcome.totalWin;
+      const res: FeatureResult = {
+        roundId: `f${++s.roundCounter}`,
+        nonce,
+        serverSeedHash: this.serverSeedHash,
+        clientSeed: s.clientSeed,
+        bet: req.bet,
+        ...outcome,
+        balance: s.balance,
+      };
+      s.pendingFeature = res;
+      this.save();
+      return res;
+    });
+  }
+
   async ack(roundId: string): Promise<void> {
     await this.serial(async (s) => {
       s.pending = s.pending.filter((r) => r.roundId !== roundId);
+      if (s.pendingFeature?.roundId === roundId) s.pendingFeature = null;
       this.save();
     });
   }
@@ -148,7 +195,7 @@ export class MockRGS implements RGS {
     });
   }
 
-  /** DEV only: the next drop uses this path instead of the fair one. Such rounds do not verify. */
+  /** DEV only: the next drop (or every ball of the next feature) uses this path instead of the fair one. Such rounds do not verify. */
   forceNextPath(forcer: ((rows: number) => number[]) | null): void {
     if (import.meta.env.DEV) this.forcer = forcer;
   }

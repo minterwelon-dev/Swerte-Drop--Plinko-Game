@@ -6,6 +6,9 @@ import { buildWaypoints, type BoardGeometry } from './BallPath';
 
 const MAX_POINTS = 32;
 
+/** What one ball presents: a classic round, or one feature ball tagged with its feature's roundId. */
+export type BallRound = Pick<DropResponse, 'roundId' | 'path' | 'bin' | 'multiplierX100' | 'win'>;
+
 export interface BallEvents {
   onPeg(row: number, peg: number): void;
   onLand(ball: Ball): void;
@@ -18,7 +21,7 @@ export interface BallEvents {
 export class Ball {
   readonly img: Phaser.GameObjects.Image;
   active = false;
-  res: DropResponse | null = null;
+  res: BallRound | null = null;
   skipping = false;
   private readonly xs = new Float32Array(MAX_POINTS);
   private readonly ys = new Float32Array(MAX_POINTS);
@@ -42,7 +45,7 @@ export class Ball {
     this.img.setVisible(true);
   }
 
-  launch(res: DropResponse, geo: BoardGeometry): void {
+  launch(res: BallRound, geo: BoardGeometry): void {
     this.res = res;
     this.seg = 0;
     this.t = 0;

@@ -27,6 +27,19 @@ export const gameConfig = {
     turboIntervalMs: 120,
   },
 
+  /** Stage B Plinko Feature presentation timings (ms). Every step is skippable. */
+  feature: {
+    introMs: 1800,
+    spinMs: 3000,
+    turboSpinMs: 1200,
+    resultMs: 1000,
+    turboResultMs: 400,
+    /** Gap between feature ball launches (normal / turbo); up to maxBalls fly at once. */
+    launchMs: 220,
+    turboLaunchMs: 90,
+    summaryMs: 5000,
+  },
+
   /** Mock transport. The DEV debug panel overrides these at runtime. */
   mock: { latencyMs: 0, failureRate: 0 },
 };
