@@ -197,17 +197,17 @@ Tick items as they are completed.
 - [x] Debug panel (DEV only)
 
 ### Phase 4: Stage B Plinko Feature (2 days)
-- [ ] `feature.ts` math: ball count, per-ball paths, jackpot bins, cap
-- [ ] Feature overlay: intro, ball count wheel, rapid multi-ball drop, running total, summary
-- [ ] Simulation of the feature: average total, hit rate per jackpot tier, max win, cap frequency
-- [ ] Document the integration interface in the README
+- [x] `feature.ts` math: ball count, per-ball paths, jackpot bins, cap
+- [x] Feature overlay: intro, ball count wheel, rapid multi-ball drop, running total, summary
+- [x] Simulation of the feature: average total, hit rate per jackpot tier, max win, cap frequency
+- [x] Document the integration interface in the README
 
 ### Phase 5: Polish and delivery (1 day)
-- [ ] FPS check under 4x CPU throttle on a mobile viewport
-- [ ] Bundle size reported (raw and gzip)
-- [ ] README with architecture diagram, state machine, RGS contract, fair protocol, how to run simulations
+- [x] FPS check under 4x CPU throttle on a mobile viewport
+- [x] Bundle size reported (raw and gzip)
+- [x] README with architecture diagram, state machine, RGS contract, fair protocol, how to run simulations
 - [ ] Deployed demo (GitHub Pages or Netlify)
-- [ ] 30 to 60 second video: normal drop, high risk 16 rows, auto-drop stopping on a limit, verify screen, feature round
+- [x] 30 to 60 second video: normal drop, high risk 16 rows, auto-drop stopping on a limit, verify screen, feature round
 
 Estimated total: 8 to 9 working days part-time.
 
