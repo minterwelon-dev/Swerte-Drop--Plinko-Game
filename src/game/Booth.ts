@@ -13,6 +13,7 @@ export class Booth {
   private readonly canopyRoots: Phaser.GameObjects.Container[] = [];
   readonly sign: Phaser.GameObjects.Container;
   private readonly title: Phaser.GameObjects.Text;
+  private readonly caption: Phaser.GameObjects.Text;
   private readonly bulbs: Phaser.GameObjects.Container[] = [];
   private readonly lights: Phaser.GameObjects.Image[] = [];
   private elapsed = 0;
@@ -80,8 +81,15 @@ export class Booth {
     this.title = scene.add
       .text(0, 0, '', { fontFamily: FONT.title, color: '#f6c744', align: 'center' })
       .setOrigin(0.5);
+    this.caption = scene.add
+      .text(0, 0, 'PLAY MONEY ONLY', {
+        fontFamily: FONT.ui,
+        fontStyle: 'bold',
+        color: PALETTE.text,
+      })
+      .setOrigin(0.5);
     this.sign = scene.add
-      .container(0, 0, [this.plank, this.wood, this.title])
+      .container(0, 0, [this.plank, this.wood, this.title, this.caption])
       .setDepth(DEPTH.hud);
     for (let i = 0; i < 42; i++) {
       const light = scene.add.image(0, 0, 'bulb').setTint([0xffd36b, 0xffffff, 0xffb347][i % 3]);
@@ -134,9 +142,11 @@ export class Booth {
     this.wood.setFrame(layout.landscape ? 'sign-tall' : 'sign-wide').setDisplaySize(sd(r.w), sd(r.h));
     this.title
       .setText(layout.signText)
-      .setPosition(0, 0)
+      .setPosition(0, -sd(r.h * 0.12))
       .setFontSize(sd(layout.signFont));
     this.title.setStroke('#1d130d', sd(4)).setShadow(sd(2), sd(3), '#1d130d', 0, false, true);
     this.title.setLineSpacing(-sd(12));
+    this.caption.setPosition(0, sd(r.h * 0.37)).setFontSize(sd(layout.signCaptionFont));
+    this.caption.setLetterSpacing(sd(1));
   }
 }

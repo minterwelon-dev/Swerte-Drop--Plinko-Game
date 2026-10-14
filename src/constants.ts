@@ -36,6 +36,7 @@ export interface Layout {
   sign: Rect;
   signText: string;
   signFont: number;
+  signCaptionFont: number;
   balance: Rect;
   win: Rect;
   history: Rect;
@@ -73,6 +74,7 @@ export function layoutPortrait(height = 1920, top = 0): Layout {
     sign: { x: 140, y: top + 88, w: 800, h: 80 },
     signText: 'SWERTE DROP',
     signFont: 50,
+    signCaptionFont: 22,
     balance: { x: 24, y: top + 188, w: 500, h: 84 },
     win: { x: 556, y: top + 188, w: 500, h: 84 },
     board: { x: 12, y: top + 292, w: 1056, h: height - 734 },
@@ -110,6 +112,7 @@ export function layoutLandscape(): Layout {
     sign: { x: 62, y: 180, w: 446, h: 175 },
     signText: 'SWERTE\nDROP',
     signFont: 66,
+    signCaptionFont: 18,
     balance: { x: 62, y: 392, w: 446, h: 108 },
     win: { x: 62, y: 518, w: 446, h: 108 },
     board: { x: 550, y: 155, w: 820, h: 880 },

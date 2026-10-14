@@ -353,7 +353,7 @@ Still open:
 
 ### English labels, ball speed and REDUCE FX (2026-10-14)
 
-- **English UI labels.** BALANSE, PANALO, TAYA, BOLA, KASAYSAYAN and HULOG are now BALANCE, WIN, BET, BALLS, HISTORY and DROP. The caption under the SWERTE DROP sign has been removed, and so has the duplicate DROP subtitle on the round landscape button. PLAY MONEY wording no longer appears on the sign.
+- **English UI labels.** BALANSE, PANALO, TAYA, BOLA, KASAYSAYAN and HULOG are now BALANCE, WIN, BET, BALLS, HISTORY and DROP. The caption under the SWERTE DROP sign now reads PLAY MONEY ONLY. The duplicate DROP subtitle on the round landscape button has been removed.
 - **Ball speed.** Row timing is back to the pre-revamp values: 150 ms per row normally and 55 ms in turbo. The hopper load/release stays, so a 16-row drop takes about 2.7 s.
 - **REDUCE FX.** The in-game choice now overrides the system setting in both directions. Before this fix, when the OS had reduced motion on, the button could not change anything. With no stored choice, the game still follows `prefers-reduced-motion`.
 - The browser checks clear the stored choice through a new-document script, so system reduced-motion emulation is tested on its own.
