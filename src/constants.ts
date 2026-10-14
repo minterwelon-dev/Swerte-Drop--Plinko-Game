@@ -36,7 +36,6 @@ export interface Layout {
   sign: Rect;
   signText: string;
   signFont: number;
-  signCaptionFont: number;
   balance: Rect;
   win: Rect;
   history: Rect;
@@ -74,14 +73,13 @@ export function layoutPortrait(height = 1920, top = 0): Layout {
     sign: { x: 140, y: top + 88, w: 800, h: 80 },
     signText: 'SWERTE DROP',
     signFont: 50,
-    signCaptionFont: 22,
     balance: { x: 24, y: top + 188, w: 500, h: 84 },
     win: { x: 556, y: top + 188, w: 500, h: 84 },
     board: { x: 12, y: top + 292, w: 1056, h: height - 734 },
     panel: { x: 0, y: bottom - 346, w: 1080, h: 346 },
     history: { x: 204, y: bottom - 422, w: 852, h: 66 },
     historyColumns: 9,
-    historyLabel: { x: 24, y: bottom - 389, font: 22, text: 'KASAYSAYAN' },
+    historyLabel: { x: 24, y: bottom - 389, font: 22, text: 'HISTORY' },
     featureBanner: { x: 24, y: bottom - 428, w: 1032, h: 76 },
     settings: { x: 40, y: settingsY, w: 1000, h: 652 },
     controls: {
@@ -112,14 +110,13 @@ export function layoutLandscape(): Layout {
     sign: { x: 62, y: 180, w: 446, h: 175 },
     signText: 'SWERTE\nDROP',
     signFont: 66,
-    signCaptionFont: 18,
     balance: { x: 62, y: 392, w: 446, h: 108 },
     win: { x: 62, y: 518, w: 446, h: 108 },
     board: { x: 550, y: 155, w: 820, h: 880 },
     panel: { x: 1414, y: 155, w: 446, h: 880 },
     history: { x: 62, y: 698, w: 446, h: 180 },
     historyColumns: 3,
-    historyLabel: { x: 62, y: 674, font: 20, text: 'KASAYSAYAN · LAST DROPS' },
+    historyLabel: { x: 62, y: 674, font: 20, text: 'HISTORY · LAST DROPS' },
     featureBanner: { x: 62, y: 660, w: 446, h: 218 },
     controls: {
       betDown: { x: 1438, y: 214, w: 74, h: 74, font: 48 },

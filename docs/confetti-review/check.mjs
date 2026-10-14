@@ -49,8 +49,7 @@ async function boot() {
   await run(`(async()=>{window.s=window.__game.scene.getScene('Game'); document.querySelector('.debug').style.display='none'; window.coords=await import(performance.getEntriesByType('resource').find(e=>e.name.includes('/src/utils/responsive.ts')).name); window.landings=[];
     const original=s.ballEvents.onLand; s.ballEvents.onLand=b=>{landings.push({bin:b.res.bin,x:b.root.x,y:b.root.y,expectedX:coords.sx(s.board.geo.binX(b.res.bin)),expectedY:coords.sy(s.board.geo.binY),win:b.res.win}); original(b);}; return true;})()`);
 }
-await send('Runtime.enable'); await send('Emulation.setFocusEmulationEnabled',{enabled:true}); await send('Emulation.setEmulatedMedia',{features:[]}); await size(390,844,2); await boot();
-await run('coords.setReducedMotion(false);true');
+await send('Runtime.enable'); await send('Page.enable'); await send('Page.addScriptToEvaluateOnNewDocument',{source:'try{localStorage.removeItem("swerte-reduced-motion")}catch{}'}); await send('Emulation.setFocusEmulationEnabled',{enabled:true}); await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]}); await size(390,844,2); await boot();
 const report={errors};
 await run(`(()=>{const stream=document.querySelector('canvas').captureStream(30);window.recording=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp9',videoBitsPerSecond:1500000});const chunks=[];window.recording.ondataavailable=e=>chunks.push(e.data);window.video=new Promise(resolve=>{recording.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());const data=new Uint8Array(await new Blob(chunks).arrayBuffer());let binary='';for(let i=0;i<data.length;i+=8192)binary+=String.fromCharCode(...data.subarray(i,i+8192));resolve(btoa(binary));};});recording.start();return true;})()`);
 await force(0); await click('drop'); await until('s.director.big.active');

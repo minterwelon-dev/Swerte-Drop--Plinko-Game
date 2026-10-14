@@ -50,9 +50,9 @@ async function boot() {
   await run(`(async()=>{window.s=window.__game.scene.getScene('Game'); document.querySelector('.debug').style.display='none'; window.coords=await import(performance.getEntriesByType('resource').find(e=>e.name.includes('/src/utils/responsive.ts')).name); window.landings=[];
     const original=s.ballEvents.onLand; s.ballEvents.onLand=b=>{landings.push({bin:b.res.bin,x:b.root.x,y:b.root.y,expectedX:coords.sx(s.board.geo.binX(b.res.bin)),expectedY:coords.sy(s.board.geo.binY),win:b.res.win}); original(b);}; return true;})()`);
 }
-await send('Runtime.enable'); await send('Emulation.setFocusEmulationEnabled',{enabled:true}); await send('Emulation.setEmulatedMedia',{features:[]}); await size(390,844,2); await boot();
+await send('Runtime.enable'); await send('Page.enable'); await send('Page.addScriptToEvaluateOnNewDocument',{source:'try{localStorage.removeItem("swerte-reduced-motion")}catch{}'}); await send('Emulation.setFocusEmulationEnabled',{enabled:true}); await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]}); await size(390,844,2); await boot();
 const report={errors,wheel:[]};
-await run('coords.setReducedMotion(false);window.maxConcurrent=0;s.events.on("postupdate",()=>{maxConcurrent=Math.max(maxConcurrent,s.pool.balls.filter(b=>b.active).length)});true');
+await run('window.maxConcurrent=0;s.events.on("postupdate",()=>{maxConcurrent=Math.max(maxConcurrent,s.pool.balls.filter(b=>b.active).length)});true');
 for (const balls of [10,12,15,20,25,30]) {
   await run(`s.overlay.spin(${balls});s.overlay.skip();true`); await wait(30);
   const result=await run('({title:s.overlay.title.text,angle:s.overlay.wheel.rotation,end:s.overlay.spinEnd})');

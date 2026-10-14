@@ -99,7 +99,8 @@ export class HudFx {
     this.winCount.update(step);
     this.betClock.update(step);
     this.limitClock.update(step);
-    this.lowClock.update(step);
+    // Real time, not turbo time: two pulses must stay under 3 Hz (spec section 0).
+    this.lowClock.update(dt);
     this.refreshMs += dt;
     if (this.refreshMs >= 33 || !this.active) {
       this.refreshMs = 0;

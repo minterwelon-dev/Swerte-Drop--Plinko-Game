@@ -8,9 +8,9 @@ export const gameConfig = {
   defaultRows: 16 as Rows,
   defaultRisk: 'medium' as Risk,
 
-  /** Row hops plus the short hopper load/release make a 16-row drop about 2.2 s. */
-  rowMs: 110,
-  turboRowMs: 44,
+  /** Row hops plus the short hopper load/release make a 16-row drop about 2.7 s. */
+  rowMs: 150,
+  turboRowMs: 55,
   maxBalls: 5,
   historyLength: 9,
 
@@ -56,7 +56,7 @@ export const gameConfig = {
     balanceMs: 250,
     betMs: 120,
     limitMs: 250,
-    lowBalanceMs: 600,
+    lowBalanceMs: 800,
     historyMs: 220,
     badgeMs: 150,
     turboFactor: 0.5,

@@ -239,15 +239,15 @@ Rules:
 - [ ] Portrait and landscape match the mockup structure; no overlap or clipping at 360x640 up to 1920x1080 and on rotation.
 - [ ] All 5 row counts and 3 risk levels render correct pegs, bins and colours from data.
 - [ ] A seeded drop always lands in the bin from the RGS response, at normal speed, turbo and after skip.
-- [ ] Skip never changes balance, bin or win; displayed totals equal `totalWin` (dev assert).
+- [x] Skip never changes balance, bin or win; displayed totals equal `totalWin` (dev assert).
 - [ ] 5 balls in flight hold 60 FPS desktop and >= 55 FPS at 4x CPU throttle (mobile viewport).
 - [ ] Sub-1x results are visibly calm (no celebration).
 - [ ] No flashing above 3 Hz; reduced motion removes shake, flashes, particles and twinkle.
 - [ ] Controls that change the board (rows, risk, bet) are disabled while balls are in flight, with a visible disabled state.
 - [ ] Ambient animation pauses on hidden tab and resumes cleanly.
 - [ ] Pools are used for balls, tags, pegs, bulbs, streamers; no allocations in `update()`.
-- [ ] No Phaser import under `src/math/`; no outcome logic in `src/game/animation/`.
-- [ ] Production build has no debug or forced-outcome code.
+- [x] No Phaser import under `src/math/`; no outcome logic in `src/game/animation/`.
+- [x] Production build has no debug or forced-outcome code.
 
 ## 10. Do not
 

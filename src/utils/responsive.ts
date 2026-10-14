@@ -56,15 +56,17 @@ export const sy = (y: number): number => vp.offY + y * vp.s;
 /** Reference size -> canvas size */
 export const sd = (d: number): number => d * vp.s;
 
-let motionOverride = false;
+/** Explicit in-game choice; null follows the system setting. An explicit choice beats the system either way. */
+let motionOverride: boolean | null = null;
 try {
-  motionOverride = localStorage.getItem('swerte-reduced-motion') === 'true';
+  const stored = localStorage.getItem('swerte-reduced-motion');
+  if (stored !== null) motionOverride = stored === 'true';
 } catch {
   /* Storage may be disabled. */
 }
 const motionQuery =
   typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-export const reducedMotion = (): boolean => motionOverride || !!motionQuery?.matches;
+export const reducedMotion = (): boolean => motionOverride ?? !!motionQuery?.matches;
 export function setReducedMotion(value: boolean): void {
   motionOverride = value;
   try {
@@ -72,30 +74,34 @@ export function setReducedMotion(value: boolean): void {
   } catch {
     /* Session preference still works. */
   }
+  applyMotion();
+}
+function applyMotion(): void {
   document.documentElement.classList.toggle('reduce-motion', reducedMotion());
   if (reducedMotion()) for (const animation of document.getAnimations?.() ?? []) animation.finish();
   document.dispatchEvent(new Event('motionchange'));
 }
 if (typeof document !== 'undefined') {
   document.documentElement.classList.toggle('reduce-motion', reducedMotion());
-  motionQuery?.addEventListener?.('change', () => setReducedMotion(motionOverride));
+  motionQuery?.addEventListener?.('change', applyMotion);
 }
 
 /** Browser viewport in CSS px and the DPR to render at (capped at 3 for fill rate). */
 export function readBrowserViewport(): Viewport {
-  const v = window.visualViewport;
-  const w = Math.round(v?.width ?? window.innerWidth);
-  const h = Math.round(v?.height ?? window.innerHeight);
-  return computeViewport(w, h, Math.min(window.devicePixelRatio || 1, 3));
+  return computeViewport(browserW(), browserH(), browserDpr());
 }
+const browserW = () => Math.round(window.visualViewport?.width ?? window.innerWidth);
+const browserH = () => Math.round(window.visualViewport?.height ?? window.innerHeight);
+const browserDpr = () => Math.min(window.devicePixelRatio || 1, 3);
 
 /**
  * Resize the canvas if the browser viewport changed. Canvas = viewport x DPR; zoom 1/DPR keeps the CSS size
  * at viewport px under Scale.NONE. Emits RELAYOUT_EVENT on the game. Cheap enough to call every frame.
  */
 export function syncViewport(game: Phaser.Game): boolean {
+  // Compare raw values first so the per-frame poll allocates nothing when idle.
+  if (browserW() === vp.w && browserH() === vp.h && browserDpr() === vp.dpr) return false;
   const next = readBrowserViewport();
-  if (next.w === vp.w && next.h === vp.h && next.dpr === vp.dpr) return false;
   setViewport(next);
   game.scale.resize(Math.round(next.w * next.dpr), Math.round(next.h * next.dpr));
   // Set zoom after resize: Phaser leaves old CSS dimensions at zoom=1 otherwise.

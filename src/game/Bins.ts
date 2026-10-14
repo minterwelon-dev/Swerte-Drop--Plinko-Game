@@ -179,7 +179,8 @@ export class Bins {
       this.rings[k]
         .setPosition(sx(geo.binX(k)), sy(geo.binY + dy))
         .setSize(sd(geo.binW * 1.05), sd(geo.binH * 1.05))
-        .setAlpha((1 - t) * (this.jackpotHit[k] ? 0.35 + 0.35 * Math.sin(t * Math.PI * 4) ** 2 : 0.7))
+        // Two glow pulses per jackpotMs: 1 Hz normal, 2 Hz turbo (spec limit 3 Hz).
+        .setAlpha((1 - t) * (this.jackpotHit[k] ? 0.35 + 0.35 * Math.sin(t * Math.PI * 2) ** 2 : 0.7))
         .setVisible(!this.quiet[k] && t < 1);
     }
   }

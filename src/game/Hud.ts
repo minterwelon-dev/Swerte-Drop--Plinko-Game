@@ -56,7 +56,6 @@ class Button {
   private readonly plate: Phaser.GameObjects.Image;
   private readonly texture: Phaser.Textures.CanvasTexture;
   private readonly symbol: Phaser.GameObjects.Graphics;
-  private readonly sub: Phaser.GameObjects.Text;
   private readonly bulbs: Phaser.GameObjects.Image[] = [];
   readonly fx: ButtonFx;
   onBlocked: (() => void) | null = null;
@@ -96,15 +95,8 @@ class Button {
         fontStyle: kind === 'drop' ? 'normal' : 'bold',
       })
       .setOrigin(0.5);
-    this.sub = scene.add
-      .text(0, 0, kind === 'drop' ? 'DROP' : '', {
-        fontFamily: FONT.ui,
-        fontStyle: 'bold',
-        color: PALETTE.text,
-      })
-      .setOrigin(0.5);
     this.root = scene.add
-      .container(0, 0, [this.plate, this.symbol, this.label, this.sub, this.bg])
+      .container(0, 0, [this.plate, this.symbol, this.label, this.bg])
       .setDepth(DEPTH.hud);
     this.fx = new ButtonFx(this.root);
     scene.input.on('pointerdown', () => {
@@ -229,7 +221,6 @@ class Button {
     if (this.kind === 'link') return;
     const shadow = this.selected || this.pressed ? 2 : 7;
     const wideDrop = this.kind === 'drop' && w > h * 1.5;
-    this.sub.setVisible(this.kind === 'drop' && !wideDrop);
     for (const bulb of this.bulbs) bulb.setVisible(!wideDrop);
     if (this.kind === 'round' || (this.kind === 'drop' && !wideDrop)) {
       g.fillStyle(PALETTE.ink).fillCircle(0, sd(shadow), sd(w / 2 + 5));
@@ -237,8 +228,7 @@ class Button {
       if (this.kind === 'drop') {
         g.fillStyle(0xda493d, 0.55).fillCircle(0, -sd(w * 0.035), sd(w * 0.44));
         g.lineStyle(sd(5), PALETTE.ink).strokeCircle(0, 0, sd(w / 2));
-        this.label.setY(-sd(h * 0.04)).setStroke('#1d130d', sd(2));
-        this.sub.setPosition(0, sd(h * 0.26)).setFontSize(sd(h * 0.12));
+        this.label.setStroke('#1d130d', sd(2));
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2;
           this.bulbs[i]
@@ -365,7 +355,7 @@ export class Hud {
     this.fx = new HudFx(scene, this.balance, this.lastWin, this.betValue);
     this.message = text('', '#ffe27a').setOrigin(0.5);
     this.message.setBackgroundColor('#b92f27').setDepth(DEPTH.errorModal).setVisible(false);
-    for (const c of ['BALANSE', 'PANALO', 'TAYA · BET', 'ROWS', 'RISK']) this.captions.push(text(c));
+    for (const c of ['BALANCE', 'WIN', 'BET', 'ROWS', 'RISK']) this.captions.push(text(c));
     this.captions[0].setColor(PALETTE.textDark);
     this.betDown = new Button(scene, '−', 'round', PALETTE.mustard, () => ev.onBet(-1));
     this.betUp = new Button(scene, '+', 'round', PALETTE.mustard, () => ev.onBet(1));
@@ -383,7 +373,7 @@ export class Hud {
           [0x5fb59c, PALETTE.mustard, PALETTE.enamel][i],
         ),
     );
-    this.drop = new Button(scene, 'HULOG', 'drop', PALETTE.drop, ev.onDrop);
+    this.drop = new Button(scene, 'DROP', 'drop', PALETTE.drop, ev.onDrop);
     this.turbo = new Button(scene, 'TURBO', 'tool', PALETTE.cream, ev.onTurbo);
     this.auto = new Button(scene, 'AUTO', 'tool', PALETTE.cream, ev.onAuto);
     this.skip = new Button(scene, 'SKIP', 'tool', PALETTE.cream, ev.onSkip);
@@ -580,7 +570,7 @@ export class Hud {
     for (let i = 0; i < ROWS_OPTIONS.length; i++)
       this.rowButtons[i].set(s.canChangeBoard, s.rows === ROWS_OPTIONS[i]);
     for (let i = 0; i < RISKS.length; i++) this.riskButtons[i].set(s.canChangeBoard, s.risk === RISKS[i]);
-    this.drop.set(s.canDrop && !s.loading, false, s.loading ? 'Loading' : 'HULOG');
+    this.drop.set(s.canDrop && !s.loading, false, s.loading ? 'Loading' : 'DROP');
     this.turbo.set(true, s.turbo);
     this.auto.set(s.canAuto || s.autoRunning, s.autoRunning, s.autoRunning ? s.autoLabel : 'AUTO');
     this.skip.set(s.canSkip);

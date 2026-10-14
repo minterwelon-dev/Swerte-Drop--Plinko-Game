@@ -47,7 +47,7 @@ export class Board {
     this.brush = scene.make.image({ key: 'brass-peg', add: false });
     this.badgeArt = scene.add.graphics();
     this.badgeLabel = scene.add
-      .text(0, 0, 'BOLA', { fontFamily: FONT.ui, fontStyle: 'bold', color: PALETTE.text })
+      .text(0, 0, 'BALLS', { fontFamily: FONT.ui, fontStyle: 'bold', color: PALETTE.text })
       .setOrigin(0, 0.5);
     this.badge = scene.add.container(0, 0, [this.badgeArt, this.badgeLabel]).setDepth(DEPTH.hud);
     for (let i = 0; i < 5; i++) {

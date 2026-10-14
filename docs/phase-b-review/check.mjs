@@ -45,10 +45,10 @@ async function until(expression, timeout=4500) {
 async function force(bin) { await run(`s.rgs.forceNextPath(rows=>Array.from({length:rows},(_,i)=>i<${bin}?1:0)); true`); }
 async function boot() {
   await send('Page.navigate',{url:'http://127.0.0.1:5173/?seed=42'}); await wait(1600);
-  await run(`(async()=>{window.s=window.__game.scene.getScene('Game'); document.querySelector('.debug').style.display='none'; window.coords=await import('/src/utils/responsive.ts'); window.landings=[];
+  await run(`(async()=>{window.s=window.__game.scene.getScene('Game'); document.querySelector('.debug').style.display='none'; window.coords=await import(performance.getEntriesByType('resource').find(e=>e.name.includes('/src/utils/responsive.ts')).name); window.landings=[];
     const original=s.ballEvents.onLand; s.ballEvents.onLand=b=>{landings.push({bin:b.res.bin,x:b.root.x,y:b.root.y,expectedX:coords.sx(s.board.geo.binX(b.res.bin)),expectedY:coords.sy(s.board.geo.binY),win:b.res.win}); original(b);}; return true;})()`);
 }
-await send('Runtime.enable'); await send('Emulation.setEmulatedMedia',{features:[]}); await size(390,844,2); await boot();
+await send('Runtime.enable'); await send('Page.enable'); await send('Page.addScriptToEvaluateOnNewDocument',{source:'try{localStorage.removeItem("swerte-reduced-motion")}catch{}'}); await send('Emulation.setFocusEmulationEnabled',{enabled:true}); await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]}); await size(390,844,2); await boot();
 const report={errors};
 assert.equal(await run('s.hud.buttons.every(b=>b.plate.width===b.texture.width && b.plate.displayOriginX===b.texture.width/2 && b.plate.displayOriginY===b.texture.height/2)'),true);
 assert.equal(await run('s.hud.buttons.filter(b=>b.root.visible).every(b=>b.texture.width>1 && b.texture.getContext().getImageData(Math.floor(b.texture.width/2),Math.floor(b.texture.height/2),1,1).data[3]>0)'),true);

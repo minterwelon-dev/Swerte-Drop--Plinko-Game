@@ -333,3 +333,29 @@ Skip, live turbo and reduced motion apply throughout. Reload recovery places the
 - Production JavaScript: **1,294.88 kB raw / 349.74 kB gzip**; CSS **3.03 / 1.18 kB**; HTML **0.57 / 0.38 kB**. Fonts and art are unchanged. Production scan found no forced-outcome handling, debug panel or `console.error`.
 
 Physical Android/iOS performance, Safari behavior and audible wheel-tick review remain unverified; browser validation was muted.
+
+### Acceptance audit (2026-10-14)
+
+Audit of the UI/animation acceptance checklist against current source and browser checks. Desktop headless Chrome only; no physical Android or iOS device was available in this pass.
+
+Fixed:
+- **Flash rate.** The low-balance border pulsed twice in 600 ms (3.3 Hz, 6.7 Hz in turbo). It now pulses twice in 800 ms of real time (2.5 Hz, unaffected by turbo). The feature jackpot bin glow pulsed four times per 2 s (4 Hz in turbo); it now pulses twice (1 Hz, 2 Hz in turbo).
+- **Per-frame allocation.** The `visualViewport` poll built a new viewport object every frame. It now compares raw width, height and DPR first and allocates only on change.
+- **Browser-check fixtures.** Current headless Chrome reports `prefers-reduced-motion: reduce` by default, so the checks ran balls at reduced speed and Phase D saw only 3 concurrent balls. The checks now emulate `no-preference` explicitly. The Phase B check also gained focus emulation and imports the app's own `responsive.ts` instance, matching the later checks.
+
+Re-run results: **96 tests, build and lint pass.** Phase B, Phase C, Phase D and confetti checks pass with no runtime exceptions. Phase D: five concurrent feature balls, exact 5000x capped settlement, display equals server balance, reload recovery and reduced motion. Five-ball samples at 390x844, DPR 2, 4x CPU throttle: **98.3 FPS / 15.0 ms worst** (feature) and **99.7 FPS / 15.1 ms worst** (classic), headless. Production JavaScript **1,294.94 kB raw / 349.75 kB gzip**; no forced-outcome handling, debug panel or `console.error`.
+
+Still open:
+- Physical Android Chrome and iOS Safari/WKWebView: sustained five-ball play, 16-row readability, live rotation, background/resume. Not tested.
+- Audible wheel-tick and sound gating review. All browser checks run muted.
+- Layout coverage is the sizes listed above, not every size between 360x640 and 1920x1080.
+- Count-up text (HUD and big-win amount) still builds a string when the value changes, throttled to about 30 per second.
+
+### English labels, ball speed and REDUCE FX (2026-10-14)
+
+- **English UI labels.** BALANSE, PANALO, TAYA, BOLA, KASAYSAYAN and HULOG are now BALANCE, WIN, BET, BALLS, HISTORY and DROP. The caption under the SWERTE DROP sign has been removed, and so has the duplicate DROP subtitle on the round landscape button. PLAY MONEY wording no longer appears on the sign.
+- **Ball speed.** Row timing is back to the pre-revamp values: 150 ms per row normally and 55 ms in turbo. The hopper load/release stays, so a 16-row drop takes about 2.7 s.
+- **REDUCE FX.** The in-game choice now overrides the system setting in both directions. Before this fix, when the OS had reduced motion on, the button could not change anything. With no stored choice, the game still follows `prefers-reduced-motion`.
+- The browser checks clear the stored choice through a new-document script, so system reduced-motion emulation is tested on its own.
+
+96 tests, build and lint pass. Phase B, Phase C, Phase D and confetti checks pass. Production JavaScript **1,294.42 kB raw / 349.61 kB gzip**.
